@@ -9,6 +9,8 @@ import { createServer } from 'http';
 import path from 'path';
 import { EmergencyVideoProcessor } from './server/overshoot-integration';
 import { EnrichedVideoAnalysisResult } from './types/schemas';
+import { EvacuationOrchestrator } from './services/orchestrator';
+import { MockDataProvider } from './mocks/mock-data-provider';
 
 const app = express();
 
@@ -23,6 +25,28 @@ const io = new Server(httpServer, {
 });
 
 const PORT = process.env.PORT || 3000;
+
+// Initialize Evacuation Orchestrator
+const orchestrator = new EvacuationOrchestrator(io);
+const mockData = new MockDataProvider();
+
+// Initialize with mock data
+console.log('[Server] Initializing mock data...');
+const mockExits = mockData.getMockExits();
+const mockHazardGrid = mockData.getMockHazardGrid();
+const mockDimensions = mockData.getBuildingDimensions();
+
+mockExits.forEach((exit, exitId) => {
+  orchestrator.updateExitStatus(exitId, exit);
+});
+
+orchestrator.updateHazardGrid(mockHazardGrid);
+orchestrator.setBuildingDimensions(mockDimensions.width, mockDimensions.height);
+
+console.log(`[Server] Mock data loaded: ${mockExits.size} exits, ${mockHazardGrid.size} hazard cells`);
+
+// Start orchestrator
+orchestrator.start();
 
 // Initialize Emergency Video Processor
 const videoProcessor = new EmergencyVideoProcessor((result: EnrichedVideoAnalysisResult) => {
@@ -52,7 +76,7 @@ io.on('connection', (socket) => {
     // Join user-specific room
     socket.join(userId);
 
-    // Initialize user state
+    // Initialize user state in video processor
     videoProcessor.updateUserState(userId, {
       id: userId,
       position: position || { x: 0, y: 0, z: 0 },
@@ -61,6 +85,20 @@ io.on('connection', (socket) => {
       speed: 0,
       groupSize: 1
     });
+
+    // Add user to orchestrator
+    orchestrator.updateUserState(userId, {
+      id: userId,
+      position: position || { x: Math.random() * 50, y: Math.random() * 50, z: 0 },
+      heading: Math.random() * 360,
+      viewingDirection: Math.random() * 360,
+      speed: 0,
+      groupSize: 1,
+      nearExit: false,
+      inHighHazardZone: false
+    });
+
+    console.log(`[Server] User ${userId} added to orchestrator at position (${position?.x || 0}, ${position?.y || 0})`);
 
     // Note: Video processing happens client-side in the browser
     // The client will handle Overshoot SDK and send analysis results to server
@@ -80,12 +118,15 @@ io.on('connection', (socket) => {
   }) => {
     const userState = videoProcessor.getUserState(data.userId);
     if (userState) {
-      videoProcessor.updateUserState(data.userId, {
+      const updatedState = {
         ...userState,
         position: data.position,
         heading: data.heading || userState.heading,
         speed: data.speed || userState.speed
-      });
+      };
+
+      videoProcessor.updateUserState(data.userId, updatedState);
+      orchestrator.updateUserState(data.userId, updatedState);
     }
   });
 
@@ -120,7 +161,8 @@ io.on('connection', (socket) => {
 
     // Find userId for this socket and stop processing
     // In production, maintain socket-to-userId mapping
-    // For now, this is a simplified cleanup
+    // For now, we'll need to track socket-to-userId mapping
+    // TODO: Implement proper cleanup when we have the mapping
   });
 
   // Manual stop processing
@@ -156,9 +198,14 @@ app.get('/stats', (req, res) => {
   res.json(videoProcessor.getStats());
 });
 
+app.get('/orchestrator-stats', (req, res) => {
+  res.json(orchestrator.getMetrics());
+});
+
 // Graceful shutdown
 process.on('SIGINT', async () => {
   console.log('\n[Server] Shutting down gracefully...');
+  orchestrator.stop();
   await videoProcessor.stopAll();
   httpServer.close(() => {
     console.log('[Server] Server closed');
@@ -168,6 +215,7 @@ process.on('SIGINT', async () => {
 
 process.on('SIGTERM', async () => {
   console.log('\n[Server] SIGTERM received, shutting down...');
+  orchestrator.stop();
   await videoProcessor.stopAll();
   httpServer.close(() => {
     console.log('[Server] Server closed');

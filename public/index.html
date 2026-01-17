@@ -500,8 +500,19 @@
                 console.log('✅ Camera access granted');
                 videoElement.srcObject = mediaStream;
 
+                // Wait for video to start playing
+                await new Promise((resolve) => {
+                    videoElement.onloadedmetadata = () => {
+                        videoElement.play().then(resolve);
+                    };
+                });
+
+                updateVideoStatus('camera', 'CAMERA ACTIVE', 'rgba(34, 197, 94, 0.95)', 'white');
+                console.log('✅ Video feed active');
+
                 // Load Overshoot SDK
                 console.log('📦 Loading Overshoot SDK...');
+                updateVideoStatus('loader-2', 'LOADING AI ANALYSIS...', 'rgba(213, 189, 175, 0.95)', 'black');
 
                 let RealtimeVision;
                 const cdnUrls = [
