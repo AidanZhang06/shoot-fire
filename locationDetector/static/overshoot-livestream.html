@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Overshoot Live Indoor Localization</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 16px;
+      background: #1a1a2e;
+      color: #eee;
+    }
+    h1 {
+      font-size: 1.5rem;
+      margin: 0 0 12px 0;
+      color: #00d4ff;
+    }
+    .subtitle {
+      color: #888;
+      margin-bottom: 20px;
+    }
+    #video {
+      width: 100%;
+      max-width: 640px;
+      background: #000;
+      border-radius: 12px;
+      display: block;
+      box-shadow: 0 4px 20px rgba(0, 212, 255, 0.3);
+    }
+    .controls {
+      margin: 16px 0;
+      display: flex;
+      gap: 12px;
+    }
+    button {
+      padding: 12px 24px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    #startBtn {
+      background: linear-gradient(135deg, #00d4ff, #0099cc);
+      color: #fff;
+    }
+    #startBtn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 212, 255, 0.5);
+    }
+    #startBtn:disabled {
+      background: #444;
+      color: #888;
+      cursor: not-allowed;
+    }
+    #stopBtn {
+      background: linear-gradient(135deg, #ff4757, #cc3344);
+      color: #fff;
+    }
+    #stopBtn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(255, 71, 87, 0.5);
+    }
+    #stopBtn:disabled {
+      background: #444;
+      color: #888;
+      cursor: not-allowed;
+    }
+    .status {
+      margin: 16px 0;
+      padding: 12px;
+      background: #2a2a3e;
+      border-radius: 8px;
+      border-left: 4px solid #00d4ff;
+    }
+    .status.error {
+      border-left-color: #ff4757;
+      background: #3e2a2a;
+    }
+    .status.success {
+      border-left-color: #00ff88;
+      background: #2a3e2a;
+    }
+    .meta {
+      background: #2a2a3e;
+      padding: 16px;
+      border-radius: 12px;
+      margin-top: 16px;
+      font-size: 0.9rem;
+      overflow-x: auto;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    }
+    .meta h2 {
+      font-size: 1.1rem;
+      margin: 0 0 12px 0;
+      color: #00d4ff;
+    }
+    .meta-section {
+      margin: 12px 0;
+      padding: 12px;
+      background: #1a1a2e;
+      border-radius: 8px;
+    }
+    .meta-section h3 {
+      font-size: 0.95rem;
+      margin: 0 0 8px 0;
+      color: #00ff88;
+    }
+    .meta-item {
+      margin: 6px 0;
+      padding: 6px 10px;
+      background: #2a2a3e;
+      border-radius: 6px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 0.85rem;
+    }
+    .confidence {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+    .confidence.high { background: #00ff88; color: #000; }
+    .confidence.medium { background: #ffd700; color: #000; }
+    .confidence.low { background: #ff8800; color: #fff; }
+    .timestamp {
+      color: #00d4ff;
+      font-size: 0.85rem;
+      margin-bottom: 12px;
+    }
+    .raw-response {
+      margin-top: 12px;
+      padding: 12px;
+      background: #1a1a2e;
+      border-radius: 8px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 0.8rem;
+      overflow-x: auto;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .loader {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 3px solid #444;
+      border-top-color: #00d4ff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <h1>🎥 Overshoot Live Indoor Localization</h1>
+  <p class="subtitle">Real-time metadata extraction from live video stream</p>
+
+  <video id="video" muted playsinline autoplay></video>
+
+  <div class="controls">
+    <button id="startBtn">Start Live Stream</button>
+    <button id="stopBtn" disabled>Stop Stream</button>
+  </div>
+
+  <div id="statusDiv" class="status" style="display: none;">
+    <span id="statusText">Initializing...</span>
+  </div>
+
+  <div class="meta">
+    <div class="timestamp" id="timestamp">—</div>
+    <h2>Latest Metadata</h2>
+    <div id="metadataDisplay">
+      <p style="color: #888;">Press "Start Live Stream" to begin. Metadata will update every few seconds.</p>
+    </div>
+  </div>
+
+  <!-- Load Overshoot SDK from npm CDN -->
+  <script type="module">
+    import { RealtimeVision } from 'https://cdn.jsdelivr.net/npm/@overshoot/sdk@latest/+esm';
+
+    const video = document.getElementById('video');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const statusDiv = document.getElementById('statusDiv');
+    const statusText = document.getElementById('statusText');
+    const timestampEl = document.getElementById('timestamp');
+    const metadataDisplay = document.getElementById('metadataDisplay');
+
+    let vision = null;
+    let resultCount = 0;
+
+    // Configuration - Load from your .env
+    const API_KEY = 'ovs_4488f728fc52c4d2ca6f8972c7cc53e3';
+    const API_URL = 'https://cluster1.overshoot.ai/api/v0.2';
+
+    // Indoor localization prompt
+    const INDOOR_PROMPT = `You are a visual perception system for indoor navigation. Your ONLY job is to extract structured observations from the live video feed.
+
+CRITICAL RULES:
+1. DO NOT infer the user's location or position in a building
+2. DO NOT reference or assume knowledge of floor plans
+3. ONLY describe what you directly see in the video
+4. Return observations in a structured format
+
+Extract the following information:
+
+1. **Scene Type**: Classify the environment (hallway, room, lobby, stairwell, elevator_area, corridor_intersection, entrance, unknown)
+
+2. **Text Detection**: Find ALL readable text
+   - Room numbers (e.g., "312", "Room 401")
+   - Floor indicators (e.g., "Floor 3", "3F")
+   - Directional signs (e.g., "EXIT →", "STAIRS")
+   - Safety signage
+
+3. **Landmarks**: Identify physical features
+   - Types: door, staircase, elevator, exit_sign, fire_extinguisher, room_number_plaque, elevator_button_panel, emergency_exit_door
+   - Direction: left, right, ahead
+   - Distance: near (< 2m), mid (2-5m), far (> 5m)
+
+4. **Quality Assessment**:
+   - Lighting: good, dim, poor, backlit
+   - Motion blur present: yes/no
+
+Return your observations in this format:
+Scene: [type]
+Text: [list all text with approximate confidence]
+Landmarks: [list with direction and distance]
+Lighting: [quality]
+Motion: [detected/stable]
+
+REMEMBER: You are a SENSOR, not a localizer. Extract observations, not conclusions about position.`;
+
+    function showStatus(message, type = 'info') {
+      statusDiv.style.display = 'block';
+      statusText.textContent = message;
+      statusDiv.className = `status ${type}`;
+    }
+
+    function hideStatus() {
+      statusDiv.style.display = 'none';
+    }
+
+    function getConfidenceClass(confidence) {
+      if (confidence >= 0.75) return 'high';
+      if (confidence >= 0.50) return 'medium';
+      return 'low';
+    }
+
+    function parseOvershootResult(result) {
+      // Overshoot returns free-form text, so we need to parse it
+      const text = result.result || result.toString();
+
+      // Try to extract structured information from the text
+      const parsed = {
+        scene_type: 'unknown',
+        text_detected: [],
+        landmarks: [],
+        lighting_quality: 'unknown',
+        motion_blur_detected: false,
+        raw_response: text
+      };
+
+      // Extract scene type
+      const sceneMatch = text.match(/Scene:\s*(\w+)/i);
+      if (sceneMatch) {
+        parsed.scene_type = sceneMatch[1].toLowerCase();
+      }
+
+      // Extract text detections
+      const textMatch = text.match(/Text:\s*(.+?)(?=\n|Landmarks:|Lighting:|Motion:|$)/is);
+      if (textMatch) {
+        const textContent = textMatch[1];
+        // Split by common delimiters and clean up
+        const texts = textContent.split(/[,;\n]/).filter(t => t.trim());
+        parsed.text_detected = texts.map(t => ({ text: t.trim(), confidence: 0.8 }));
+      }
+
+      // Extract landmarks
+      const landmarksMatch = text.match(/Landmarks:\s*(.+?)(?=\n|Lighting:|Motion:|$)/is);
+      if (landmarksMatch) {
+        const landmarksContent = landmarksMatch[1];
+        const landmarks = landmarksContent.split(/[,;\n]/).filter(l => l.trim());
+        parsed.landmarks = landmarks.map(l => {
+          // Try to extract type, direction, distance from text like "door ahead near"
+          const parts = l.toLowerCase().split(/\s+/);
+          return {
+            type: parts[0] || 'unknown',
+            direction: parts.find(p => ['left', 'right', 'ahead', 'behind'].includes(p)) || 'ahead',
+            distance: parts.find(p => ['near', 'mid', 'far'].includes(p)) || 'mid',
+            confidence: 0.75
+          };
+        });
+      }
+
+      // Extract lighting
+      const lightingMatch = text.match(/Lighting:\s*(\w+)/i);
+      if (lightingMatch) {
+        parsed.lighting_quality = lightingMatch[1].toLowerCase();
+      }
+
+      // Detect motion
+      parsed.motion_blur_detected = /motion.*blur|blur.*detected|unstable/i.test(text);
+
+      return parsed;
+    }
+
+    function displayMetadata(data) {
+      resultCount++;
+      timestampEl.textContent = `Result #${resultCount} at ${new Date().toLocaleTimeString()}`;
+
+      let html = '';
+
+      // Scene type
+      html += `<div class="meta-section">
+        <h3>🏢 Scene Classification</h3>
+        <div class="meta-item">
+          <strong>Type:</strong> ${data.scene_type.toUpperCase()}
+        </div>
+      </div>`;
+
+      // Text detected
+      if (data.text_detected && data.text_detected.length > 0) {
+        html += `<div class="meta-section">
+          <h3>📝 Detected Text (${data.text_detected.length})</h3>`;
+        data.text_detected.forEach(item => {
+          const confClass = getConfidenceClass(item.confidence);
+          html += `<div class="meta-item">
+            "${item.text}"
+            <span class="confidence ${confClass}">${(item.confidence * 100).toFixed(0)}%</span>
+          </div>`;
+        });
+        html += `</div>`;
+      }
+
+      // Landmarks
+      if (data.landmarks && data.landmarks.length > 0) {
+        html += `<div class="meta-section">
+          <h3>🚪 Landmarks (${data.landmarks.length})</h3>`;
+        data.landmarks.forEach(item => {
+          const confClass = getConfidenceClass(item.confidence);
+          html += `<div class="meta-item">
+            <strong>${item.type}</strong>: ${item.direction} / ${item.distance}
+            <span class="confidence ${confClass}">${(item.confidence * 100).toFixed(0)}%</span>
+          </div>`;
+        });
+        html += `</div>`;
+      }
+
+      // Quality indicators
+      html += `<div class="meta-section">
+        <h3>💡 Quality Indicators</h3>
+        <div class="meta-item"><strong>Lighting:</strong> ${data.lighting_quality}</div>
+        <div class="meta-item"><strong>Motion Blur:</strong> ${data.motion_blur_detected ? 'YES ⚠️' : 'NO ✓'}</div>
+      </div>`;
+
+      // Raw response
+      if (data.raw_response) {
+        html += `<div class="meta-section">
+          <h3>📄 Raw Response</h3>
+          <div class="raw-response">${data.raw_response}</div>
+        </div>`;
+      }
+
+      metadataDisplay.innerHTML = html;
+    }
+
+    startBtn.onclick = async function() {
+      try {
+        showStatus('Initializing camera and Overshoot vision...', 'info');
+        startBtn.disabled = true;
+
+        // Initialize Overshoot RealtimeVision
+        vision = new RealtimeVision({
+          apiUrl: API_URL,
+          apiKey: API_KEY,
+          prompt: INDOOR_PROMPT,
+          source: {
+            type: 'camera',
+            cameraFacing: 'environment'  // Use back camera
+          },
+          // Processing parameters
+          clip_length_seconds: 2.0,     // Analyze 2-second clips
+          delay_seconds: 3.0,            // Get results every 3 seconds
+          fps: 30,                       // Capture at 30fps
+          sampling_ratio: 0.2,           // Send 20% of frames (6 fps effective)
+          // Result callback
+          onResult: (result) => {
+            console.log('Overshoot result:', result);
+            const parsedData = parseOvershootResult(result);
+            displayMetadata(parsedData);
+            showStatus('✓ Stream active - receiving real-time metadata', 'success');
+          },
+          onError: (error) => {
+            console.error('Overshoot error:', error);
+            showStatus(`Error: ${error.message}`, 'error');
+          }
+        });
+
+        // Start the vision stream
+        await vision.start();
+
+        // Get the video element from Overshoot and display it
+        const videoStream = vision.getVideoElement();
+        if (videoStream) {
+          video.srcObject = videoStream.srcObject;
+        }
+
+        stopBtn.disabled = false;
+        showStatus('🎥 Live stream started - analyzing every 3 seconds', 'success');
+
+      } catch (error) {
+        console.error('Failed to start:', error);
+        showStatus(`Failed to start: ${error.message}`, 'error');
+        startBtn.disabled = false;
+      }
+    };
+
+    stopBtn.onclick = async function() {
+      if (vision) {
+        await vision.stop();
+        vision = null;
+      }
+
+      video.srcObject = null;
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      resultCount = 0;
+
+      hideStatus();
+      metadataDisplay.innerHTML = '<p style="color: #888;">Stream stopped. Press "Start Live Stream" to begin again.</p>';
+      timestampEl.textContent = '—';
+    };
+  </script>
+</body>
+</html>

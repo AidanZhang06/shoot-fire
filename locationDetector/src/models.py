@@ -1,0 +1,132 @@
+"""
+Data models for indoor localization metadata extraction.
+Defines the strict JSON schema for observations extracted from phone camera frames.
+"""
+
+from typing import Literal, Optional
+from pydantic import BaseModel, Field, field_validator
+
+
+class TextDetection(BaseModel):
+    """Detected text from camera frame with confidence score."""
+    text: str = Field(..., description="Detected text content")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Detection confidence (0-1)")
+
+    @field_validator('text')
+    @classmethod
+    def text_not_empty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Text cannot be empty")
+        return v.strip()
+
+
+class Landmark(BaseModel):
+    """Physical landmark detected in camera view with spatial context."""
+    type: Literal[
+        "door",
+        "staircase",
+        "elevator",
+        "exit_sign",
+        "fire_extinguisher",
+        "room_number_plaque",
+        "elevator_button_panel",
+        "emergency_exit_door",
+        "restroom_sign",
+        "water_fountain",
+        "floor_directory"
+    ] = Field(..., description="Type of landmark detected")
+
+    direction: Literal["left", "right", "ahead", "behind"] = Field(
+        ..., description="Landmark direction relative to camera view"
+    )
+
+    distance: Literal["near", "mid", "far"] = Field(
+        ..., description="Approximate distance category"
+    )
+
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Detection confidence (0-1)")
+
+    additional_info: Optional[str] = Field(
+        None,
+        description="Optional additional context (e.g., door state: open/closed)"
+    )
+
+
+class IndoorMetadata(BaseModel):
+    """
+    Complete metadata extracted from a single phone camera frame.
+    This is the strict output format returned by the perception layer.
+    """
+
+    scene_type: Literal[
+        "hallway",
+        "room",
+        "lobby",
+        "stairwell",
+        "elevator_area",
+        "corridor_intersection",
+        "entrance",
+        "unknown"
+    ] = Field(..., description="Classified environment type")
+
+    scene_confidence: float = Field(
+        ..., ge=0.0, le=1.0,
+        description="Confidence in scene classification"
+    )
+
+    text_detected: list[TextDetection] = Field(
+        default_factory=list,
+        description="All text detected in frame (room numbers, signage, etc.)"
+    )
+
+    landmarks: list[Landmark] = Field(
+        default_factory=list,
+        description="Physical landmarks visible in frame with spatial cues"
+    )
+
+    lighting_quality: Literal["good", "dim", "poor", "backlit"] = Field(
+        "good", description="Lighting conditions affecting detection quality"
+    )
+
+    motion_blur_detected: bool = Field(
+        False, description="Whether significant motion blur was detected"
+    )
+
+    frame_quality_score: float = Field(
+        ..., ge=0.0, le=1.0,
+        description="Overall frame quality for processing (1.0 = excellent)"
+    )
+
+    processing_notes: Optional[str] = Field(
+        None,
+        description="Optional notes about processing issues or ambiguities"
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "scene_type": "hallway",
+                "scene_confidence": 0.94,
+                "text_detected": [
+                    {"text": "Floor 3", "confidence": 0.92},
+                    {"text": "Room 312", "confidence": 0.88}
+                ],
+                "landmarks": [
+                    {
+                        "type": "exit_sign",
+                        "direction": "ahead",
+                        "distance": "mid",
+                        "confidence": 0.91
+                    },
+                    {
+                        "type": "staircase",
+                        "direction": "left",
+                        "distance": "near",
+                        "confidence": 0.85
+                    }
+                ],
+                "lighting_quality": "good",
+                "motion_blur_detected": False,
+                "frame_quality_score": 0.89
+            }
+        }

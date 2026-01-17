@@ -1,0 +1,415 @@
+Indoor Localization Metadata Extraction Service
+===============================================
+
+Project Structure
+-----------------
+
+nexhacks-winners/
+│
+├── src/                                   # Core application code
+│   ├── __init__.py                       # Package initialization
+│   ├── api.py                            # FastAPI REST endpoints
+│   ├── metadata_extractor.py             # Orchestration & error handling
+│   ├── overshoot_client.py               # Overshoot API client + prompt
+│   ├── models.py                         # Pydantic data models
+│   └── config.py                         # Configuration management
+│
+├── docs/                                  # Documentation
+│   ├── PROJECT_OVERVIEW.md               # Architecture & design principles
+│   ├── FAILURE_CASES.md                  # Edge case handling analysis
+│   └── PROMPT_ENGINEERING.md             # Prompt design explained
+│
+├── examples/                              # Example clients
+│   ├── test_client.py                    # Python CLI test client
+│   └── react_native_example.tsx          # React Native integration
+│
+├── README.md                              # Comprehensive documentation
+├── QUICKSTART.md                          # 5-minute getting started guide
+├── IMPLEMENTATION_SUMMARY.md              # This implementation overview
+├── PROJECT_STRUCTURE.txt                  # This file
+│
+├── requirements.txt                       # Python dependencies
+├── .env.example                          # Environment variable template
+├── .gitignore                            # Git ignore rules
+└── run_server.sh                         # Automated server startup
+
+
+File Purposes
+-------------
+
+Core Application Files:
+┌──────────────────────────────────────────────────────────────────────┐
+│ api.py (194 lines)                                                   │
+│ • FastAPI application initialization                                 │
+│ • POST /extract - single frame processing                            │
+│ • POST /extract/batch - multiple frame processing                    │
+│ • GET /health - health check                                         │
+│ • GET /schema - JSON schema                                          │
+│ • CORS configuration for mobile apps                                 │
+│ • Global exception handling                                          │
+└──────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ metadata_extractor.py (240 lines)                                    │
+│ • MetadataExtractionService class                                    │
+│ • process_frame() - main extraction method                           │
+│ • Retry logic with exponential backoff (3x)                          │
+│ • Validation error recovery                                          │
+│ • Confidence filtering                                               │
+│ • Fallback data generation                                           │
+│ • Batch processing support                                           │
+└──────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ overshoot_client.py (189 lines)                                      │
+│ • OvershootVisionClient class                                        │
+│ • EXTRACTION_PROMPT - carefully engineered prompt ⭐                 │
+│ • extract_metadata() - API call method                               │
+│ • Image compression (1024px, JPEG 85%)                               │
+│ • Base64 encoding                                                    │
+│ • HTTP client configuration                                          │
+└──────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ models.py (87 lines)                                                 │
+│ • IndoorMetadata - main output schema                                │
+│ • TextDetection - detected text with confidence                      │
+│ • Landmark - physical feature with spatial context                   │
+│ • Pydantic validation rules                                          │
+│ • Field constraints and examples                                     │
+└──────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ config.py (35 lines)                                                 │
+│ • Settings class with Pydantic                                       │
+│ • Environment variable loading                                       │
+│ • Configuration defaults                                             │
+│ • Cached settings instance                                           │
+└──────────────────────────────────────────────────────────────────────┘
+
+
+Data Flow
+---------
+
+1. Phone captures frame (JPEG, ~500KB)
+   │
+   ▼
+2. POST /extract (api.py)
+   • Validates file type and size
+   • Reads image bytes
+   │
+   ▼
+3. MetadataExtractionService.process_frame()
+   • Orchestrates extraction
+   • Handles retries on failure
+   │
+   ▼
+4. OvershootVisionClient.extract_metadata()
+   • Compresses image (~150KB)
+   • Encodes as base64
+   • Combines with EXTRACTION_PROMPT
+   • Sends to Overshoot API
+   │
+   ▼
+5. Overshoot Vision API
+   • Processes image + prompt
+   • Returns JSON observations
+   │
+   ▼
+6. Validation (models.py)
+   • Parses into IndoorMetadata
+   • Validates all fields
+   • Fixes common errors
+   │
+   ▼
+7. Confidence Filtering
+   • Removes low-confidence items
+   • Based on CONFIDENCE_THRESHOLD
+   │
+   ▼
+8. JSON Response
+   • Returns IndoorMetadata to client
+   • Always valid JSON (even on failures)
+
+
+Key Design Patterns
+-------------------
+
+┌─────────────────────────────────────────────────────────────────┐
+│ Graceful Degradation Pattern                                    │
+│                                                                  │
+│ Traditional:  Good Frame → Data                                 │
+│               Bad Frame  → Error (❌)                            │
+│                                                                  │
+│ This System:  Good Frame → High Confidence Data                 │
+│               Bad Frame  → Low Confidence Data + Flags (✓)      │
+│                                                                  │
+│ Benefits: No lost frames, partial data is useful                │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│ Separation of Concerns                                           │
+│                                                                  │
+│ This Service:      What does camera see?                        │
+│ Downstream System: Where is the user?                           │
+│                                                                  │
+│ Prevents: Hallucination of location from visual cues            │
+│ Enables: Modular architecture, testability                      │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│ Retry with Exponential Backoff                                  │
+│                                                                  │
+│ Attempt 1: Immediate                                            │
+│ Attempt 2: Wait 1 second                                        │
+│ Attempt 3: Wait 2 seconds                                       │
+│ Attempt 4: Wait 4 seconds                                       │
+│ Finally:   Return fallback data                                 │
+│                                                                  │
+│ Handles: Network glitches, API rate limits, transient errors    │
+└─────────────────────────────────────────────────────────────────┘
+
+
+Configuration
+-------------
+
+Environment Variables (.env):
+
+Required:
+  OVERSHOOT_API_KEY              Your Overshoot Vision API key
+
+Optional (with defaults):
+  OVERSHOOT_API_URL              API endpoint URL
+  OVERSHOOT_TIMEOUT=30           Request timeout (seconds)
+
+  API_HOST=0.0.0.0              Server bind address
+  API_PORT=8000                  Server port
+  API_DEBUG=false                Debug mode
+
+  MAX_IMAGE_SIZE_MB=10           Max upload size
+  CONFIDENCE_THRESHOLD=0.5       Min confidence to include
+  ENABLE_CACHING=true            Enable response caching
+
+  MAX_RETRIES=3                  Retry attempts
+  RETRY_DELAY=1.0                Initial retry delay (seconds)
+
+
+Quick Commands
+--------------
+
+Setup:
+  pip install -r requirements.txt
+  cp .env.example .env
+  # Edit .env and add OVERSHOOT_API_KEY
+
+Run Server:
+  ./run_server.sh
+  # or: python -m src.api
+
+Test:
+  curl -X POST "http://localhost:8000/extract" \
+    -F "file=@image.jpg" | jq .
+
+  python examples/test_client.py image.jpg
+
+Health Check:
+  curl http://localhost:8000/health
+
+API Docs (auto-generated):
+  Open http://localhost:8000/docs in browser
+
+
+Documentation Quick Reference
+------------------------------
+
+Getting Started:
+  QUICKSTART.md              5-minute setup guide
+  README.md                  Comprehensive documentation
+
+Understanding the System:
+  IMPLEMENTATION_SUMMARY.md  Overview of what was built
+  PROJECT_OVERVIEW.md        Architecture and design
+
+Technical Deep Dives:
+  FAILURE_CASES.md           How edge cases are handled
+  PROMPT_ENGINEERING.md      Why the prompt works
+
+Code Examples:
+  examples/test_client.py         Python client
+  examples/react_native_example.tsx   Mobile integration
+
+
+API Endpoints
+-------------
+
+POST /extract
+  Description:  Process single camera frame
+  Input:        multipart/form-data with 'file' field
+  Output:       IndoorMetadata JSON
+  Example:      curl -X POST http://localhost:8000/extract \
+                  -F "file=@image.jpg"
+
+POST /extract/batch
+  Description:  Process multiple frames (up to 50)
+  Input:        multipart/form-data with 'files' field (multiple)
+  Output:       Array of IndoorMetadata JSON
+  Example:      curl -X POST http://localhost:8000/extract/batch \
+                  -F "files=@img1.jpg" -F "files=@img2.jpg"
+
+GET /health
+  Description:  Health check endpoint
+  Output:       {"status": "healthy", "service": "...", "version": "..."}
+  Example:      curl http://localhost:8000/health
+
+GET /schema
+  Description:  Get JSON schema for IndoorMetadata
+  Output:       JSON Schema object
+  Example:      curl http://localhost:8000/schema
+
+
+Output Schema (IndoorMetadata)
+-------------------------------
+
+{
+  "scene_type": "hallway" | "room" | "lobby" | "stairwell" |
+                "elevator_area" | "corridor_intersection" |
+                "entrance" | "unknown",
+
+  "scene_confidence": 0.0 - 1.0,
+
+  "text_detected": [
+    {
+      "text": "Room 312",
+      "confidence": 0.0 - 1.0
+    }
+  ],
+
+  "landmarks": [
+    {
+      "type": "door" | "staircase" | "elevator" | "exit_sign" | ...,
+      "direction": "left" | "right" | "ahead" | "behind",
+      "distance": "near" | "mid" | "far",
+      "confidence": 0.0 - 1.0,
+      "additional_info": "optional context string"
+    }
+  ],
+
+  "lighting_quality": "good" | "dim" | "poor" | "backlit",
+  "motion_blur_detected": true | false,
+  "frame_quality_score": 0.0 - 1.0,
+  "processing_notes": "optional diagnostic message"
+}
+
+
+Development Workflow
+--------------------
+
+1. Make changes to code
+2. Restart server (Ctrl+C, then ./run_server.sh)
+3. Test with: python examples/test_client.py image.jpg
+4. Check logs (structured JSON output)
+5. Iterate
+
+For rapid testing:
+  - Use API_DEBUG=true in .env for detailed logging
+  - Use low CONFIDENCE_THRESHOLD to see all detections
+  - Test with variety of images (good, blurry, dark, etc.)
+
+
+Testing Checklist
+-----------------
+
+□ Health check responds:
+  curl http://localhost:8000/health
+
+□ Single frame processing:
+  python examples/test_client.py good_image.jpg
+
+□ Motion blur handling:
+  python examples/test_client.py blurry_image.jpg
+  # Should return data with motion_blur_detected=true
+
+□ Poor lighting handling:
+  python examples/test_client.py dark_image.jpg
+  # Should return data with lighting_quality="poor"
+
+□ Featureless scene:
+  python examples/test_client.py blank_wall.jpg
+  # Should return valid JSON with empty arrays
+
+□ Batch processing:
+  curl -X POST http://localhost:8000/extract/batch \
+    -F "files=@img1.jpg" -F "files=@img2.jpg"
+
+
+Deployment Checklist
+--------------------
+
+□ Set production OVERSHOOT_API_KEY in environment
+□ Set API_DEBUG=false
+□ Configure CORS with specific origins (not "*")
+□ Set MAX_IMAGE_SIZE_MB appropriately
+□ Add rate limiting middleware
+□ Set up monitoring/logging aggregation
+□ Configure load balancer if scaling horizontally
+□ Set up health check monitoring
+□ Test with production-like images
+□ Document API endpoint for clients
+
+
+Common Issues & Solutions
+-------------------------
+
+Issue: "Extraction service not initialized"
+Solution: Check .env file exists with valid OVERSHOOT_API_KEY
+
+Issue: "Connection refused"
+Solution: Verify server is running on correct port (lsof -i :8000)
+
+Issue: Empty landmarks/text arrays
+Solution: Normal for featureless scenes; check processing_notes
+
+Issue: All confidence scores are low
+Solution: Check image quality; review frame_quality_score
+
+Issue: JSON parsing error
+Solution: Server logs will show validation errors; check image format
+
+
+Project Statistics
+------------------
+
+Core Code:           ~750 lines Python
+Documentation:       ~3,500 lines Markdown
+Total Files:         17 (5 core, 5 docs, 2 examples, 5 config)
+API Endpoints:       4 (extract, batch, health, schema)
+Dependencies:        10 Python packages
+Estimated Latency:   1-3 seconds per frame
+Memory per Worker:   ~50MB
+Supported Formats:   JPEG, PNG
+Max Image Size:      10MB (configurable)
+
+
+Credits
+-------
+
+Built for: NexHacks Indoor Localization Project
+Framework: FastAPI (Python)
+AI Service: Overshoot Vision API
+Documentation: Comprehensive guides and examples included
+License: [Your License]
+
+
+Next Steps
+----------
+
+1. ✓ Implementation complete
+2. → Configure Overshoot API key
+3. → Run server and test with images
+4. → Integrate with mobile app
+5. → Build floor plan matching logic
+6. → Combine with IMU/WiFi data
+7. → Test in real building
+8. → Demo at hackathon!
+
+Good luck! 🚀
