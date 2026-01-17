@@ -16,6 +16,8 @@ import { NavigationGraphImpl } from './navigation/NavigationGraph';
 import { GraphBuilder } from './navigation/GraphBuilder';
 import { FireScenario } from './ai/types';
 import { ScenarioState } from './scenario/types';
+import { ParsedScenario } from './utils/ScenarioParser';
+import { CompassLegend, CameraRotationTracker } from './components/CompassLegend';
 
 // Building data for navigation
 const mockBuildingLevels = [
@@ -44,6 +46,8 @@ function App() {
   const [firstPersonMode, setFirstPersonMode] = useState(false);
   const [showCoordinateAxes, setShowCoordinateAxes] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+  const [parsedScenario, setParsedScenario] = useState<ParsedScenario | null>(null);
+  const [cameraRotation, setCameraRotation] = useState(0);
 
   // Initialize navigation graph
   useEffect(() => {
@@ -177,10 +181,49 @@ function App() {
     }
   }, [scenarioEngine]);
 
+  const handleScenarioParsed = useCallback((parsed: ParsedScenario) => {
+    setParsedScenario(parsed);
+
+    // Update player position if provided
+    if (parsed.playerPosition) {
+      setPlayerPosition(parsed.playerPosition);
+    }
+
+    // Update scenario state with parsed hazards
+    if (scenarioState) {
+      const fireLocations = parsed.hazards
+        .filter(h => h.type === 'fire')
+        .map(h => ({
+          position: h.position,
+          intensity: h.intensity,
+          startTime: Date.now()
+        }));
+
+      const smokeAreas = parsed.hazards
+        .filter(h => h.type === 'smoke')
+        .map(h => ({
+          nodes: [],
+          level: h.intensity,
+          region: h.description,
+          position: h.position
+        }));
+
+      setScenarioState({
+        ...scenarioState,
+        fireLocations,
+        smokeAreas,
+        currentFloor: parsed.floor
+      });
+    }
+  }, [scenarioState]);
+
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh' }}>
       {/* 3D Canvas - 75% width */}
       <div style={{ width: '75%', height: '100%', position: 'relative' }}>
+        {/* Compass Legend Overlay */}
+        {scenario && <CompassLegend rotation={cameraRotation} />}
+
         <Canvas
           camera={{ position: [80, 60, 80], fov: 50 }}
           style={{ background: '#1a1a2e' }}
@@ -229,6 +272,9 @@ function App() {
             />
           )}
 
+          {/* Camera rotation tracker for compass */}
+          <CameraRotationTracker onRotationChange={setCameraRotation} />
+
           {/* Camera Controls */}
           {firstPersonMode ? (
             <FirstPersonCamera
@@ -276,6 +322,7 @@ function App() {
         scenario={scenario || undefined}
         onToggleFirstPerson={setFirstPersonMode}
         firstPersonMode={firstPersonMode}
+        onScenarioParsed={handleScenarioParsed}
       />
     </div>
   );

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { scenarioGenerator } from './ai/ScenarioGenerator';
 import { FireScenario } from './ai/types';
 import { ScenarioState } from './scenario/types';
+import { scenarioParser, ParsedScenario } from './utils/ScenarioParser';
 
 interface ScenarioPanelProps {
   onScenarioStart?: (scenario: FireScenario) => void;
@@ -10,6 +11,7 @@ interface ScenarioPanelProps {
   scenario?: FireScenario;
   onToggleFirstPerson?: (enabled: boolean) => void;
   firstPersonMode?: boolean;
+  onScenarioParsed?: (parsed: ParsedScenario) => void;
 }
 
 interface ScenarioChoice {
@@ -23,13 +25,14 @@ interface StepFeedback {
   tip: string;
 }
 
-export function ScenarioPanel({ 
-  onScenarioStart, 
-  onDecision, 
-  scenarioState, 
+export function ScenarioPanel({
+  onScenarioStart,
+  onDecision,
+  scenarioState,
   scenario: externalScenario,
-  onToggleFirstPerson, 
-  firstPersonMode = false
+  onToggleFirstPerson,
+  firstPersonMode = false,
+  onScenarioParsed
 }: ScenarioPanelProps) {
   const [scenario, setScenario] = useState<FireScenario | null>(null);
   const [loading, setLoading] = useState(false);
@@ -109,6 +112,12 @@ export function ScenarioPanel({
     const current = situations[stepNum];
     setCurrentSituation(current.situation);
     setChoices(current.choices);
+
+    // Parse the situation text to extract location and hazard info
+    if (onScenarioParsed) {
+      const parsed = scenarioParser.parseScenarioText(current.situation, 6);
+      onScenarioParsed(parsed);
+    }
   };
 
   const handleChoice = (choiceId: string) => {

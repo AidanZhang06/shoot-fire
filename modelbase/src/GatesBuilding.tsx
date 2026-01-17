@@ -311,8 +311,35 @@ export function GatesBuilding() {
     return levels;
   }, []);
 
+  // Quadrant positions for floors 5 and 6
+  const quadrants = [
+    { label: 'Q1', position: [18, 0.5, 8], floor: 5 },      // East-North corner
+    { label: 'Q2', position: [0, 0.5, 0], floor: 5 },       // Center
+    { label: 'Q3', position: [-18, 0.5, 8], floor: 5 },     // West-North corner
+    { label: 'Q1', position: [18, 0.5, 8], floor: 6 },      // East-North corner
+    { label: 'Q2', position: [0, 0.5, 0], floor: 6 },       // Center
+    { label: 'Q3', position: [-18, 0.5, 8], floor: 6 },     // West-North corner
+  ];
+
   return (
     <group position={[0, 0, 0]}>
+      {/* Quadrant labels */}
+      {quadrants.map((quadrant, idx) => (
+        <Text
+          key={`quadrant-${idx}`}
+          position={[quadrant.position[0], quadrant.floor * floorHeight + quadrant.position[1], quadrant.position[2]]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          fontSize={2.5}
+          color="#ffaa00"
+          anchorX="center"
+          anchorY="middle"
+          outlineWidth={0.1}
+          outlineColor="#000000"
+        >
+          {quadrant.label}
+        </Text>
+      ))}
+
       {building.map((level: Level, levelIndex: number) => {
         const yPos = levelIndex * floorHeight;
 
