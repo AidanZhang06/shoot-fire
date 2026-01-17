@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { GreenDotPerson } from '../GreenDotPerson';
@@ -10,17 +10,23 @@ interface CharacterControllerProps {
   targetPosition?: [number, number, number];
   currentNode?: NavigationNode;
   onPositionUpdate?: (position: [number, number, number], nodeId?: string) => void;
+  showAxes?: boolean;
 }
 
 export function CharacterController({
   position: initialPosition,
   targetPosition,
   currentNode,
-  onPositionUpdate
+  onPositionUpdate,
+  showAxes = false
 }: CharacterControllerProps) {
   const [currentPosition, setCurrentPosition] = useState<[number, number, number]>(initialPosition);
   const [animation, setAnimation] = useState<MovementAnimation | null>(null);
   const groupRef = useRef<THREE.Group | null>(null);
+
+  // Create axes helper (memoized so it doesn't recreate every render)
+  // Size 8 makes axes large enough to see all three colors clearly
+  const axesHelper = useMemo(() => new THREE.AxesHelper(8), []);
 
   // Update position when target changes
   useEffect(() => {
@@ -85,6 +91,11 @@ export function CharacterController({
   return (
     <group ref={groupRef}>
       <GreenDotPerson position={[0, 0, 0]} />
+
+      {/* Coordinate axes at the bottom of the character (at their feet) */}
+      {showAxes && (
+        <primitive object={axesHelper} position={[0, 0, 0]} />
+      )}
     </group>
   );
 }

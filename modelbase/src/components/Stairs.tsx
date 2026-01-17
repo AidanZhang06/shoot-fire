@@ -20,27 +20,17 @@ export function Stairs({ position, floorFrom, floorTo, direction, label, width =
 
   return (
     <group position={position}>
-      {/* Staircase enclosure walls */}
-      <Box
-        args={[stepWidth + 0.4, floorHeight + 0.2, stairsDepth + 0.4]}
-        position={[0, floorHeight / 2, 0]}
-      >
-        <meshStandardMaterial
-          color="#444444"
-          roughness={0.8}
-          opacity={0.3}
-          transparent
-        />
-      </Box>
+      {/* Removed: Staircase enclosure walls - was creating unwanted box */}
 
       {/* Stairwell floor base */}
       <Box
-        args={[stepWidth + 0.2, 0.1, stairsDepth + 0.2]}
-        position={[0, 0.05, 0]}
+        args={[stepWidth + 0.2, 0.2, stairsDepth + 0.2]}
+        position={[0, 0.1, 0]}
       >
         <meshStandardMaterial
-          color="#333333"
+          color="#2a2a2a"
           roughness={0.7}
+          metalness={0.1}
         />
       </Box>
 
@@ -53,26 +43,24 @@ export function Stairs({ position, floorFrom, floorTo, direction, label, width =
 
         return (
           <React.Fragment key={`step-${i}`}>
-            {/* Step tread */}
+            {/* Step tread - more visible */}
             <Box
-              args={[stepWidth, stepHeight * 0.8, stepDepth]}
-              position={[0, stepY + stepHeight * 0.4, stepZ]}
+              args={[stepWidth, stepHeight * 0.7, stepDepth * 1.1]}
+              position={[0, stepY + stepHeight * 0.35, stepZ]}
             >
               <meshStandardMaterial
-                color="#aaaaaa"
-                roughness={0.3}
-                metalness={0.2}
-                emissive="#666666"
-                emissiveIntensity={0.1}
+                color="#b0b0b0"
+                roughness={0.4}
+                metalness={0.3}
               />
             </Box>
-            {/* Step riser */}
+            {/* Step riser - more prominent */}
             <Box
-              args={[stepWidth, stepHeight * 0.2, 0.1]}
-              position={[0, stepY + stepHeight * 0.9, stepZ + (direction === 'up' ? stepDepth / 2 : -stepDepth / 2)]}
+              args={[stepWidth, stepHeight * 0.3, 0.15]}
+              position={[0, stepY + stepHeight * 0.85, stepZ + (direction === 'up' ? stepDepth / 2 : -stepDepth / 2)]}
             >
               <meshStandardMaterial
-                color="#888888"
+                color="#909090"
                 roughness={0.5}
               />
             </Box>
@@ -80,60 +68,33 @@ export function Stairs({ position, floorFrom, floorTo, direction, label, width =
         );
       })}
 
-      {/* Handrails - more prominent */}
+      {/* Handrails - solid walls on sides */}
       <Box
-        args={[0.15, floorHeight + 1, 0.15]}
-        position={[stepWidth / 2, (floorHeight + 1) / 2, 0]}
+        args={[0.2, floorHeight + 0.5, stairsDepth + 0.2]}
+        position={[stepWidth / 2 + 0.1, (floorHeight + 0.5) / 2, 0]}
       >
         <meshStandardMaterial
-          color="#ffffff"
-          metalness={0.8}
-          roughness={0.2}
-          emissive="#ffffff"
-          emissiveIntensity={0.2}
+          color="#cccccc"
+          metalness={0.4}
+          roughness={0.3}
+          opacity={0.8}
+          transparent
         />
       </Box>
       <Box
-        args={[0.15, floorHeight + 1, 0.15]}
-        position={[-stepWidth / 2, (floorHeight + 1) / 2, 0]}
+        args={[0.2, floorHeight + 0.5, stairsDepth + 0.2]}
+        position={[-stepWidth / 2 - 0.1, (floorHeight + 0.5) / 2, 0]}
       >
         <meshStandardMaterial
-          color="#ffffff"
-          metalness={0.8}
-          roughness={0.2}
-          emissive="#ffffff"
-          emissiveIntensity={0.2}
+          color="#cccccc"
+          metalness={0.4}
+          roughness={0.3}
+          opacity={0.8}
+          transparent
         />
       </Box>
 
-      {/* Handrail horizontal bars */}
-      {Array.from({ length: 3 }).map((_, i) => {
-        const barY = (i + 1) * (floorHeight / 4);
-        return (
-          <React.Fragment key={`bar-${i}`}>
-            <Box
-              args={[stepWidth, 0.1, 0.15]}
-              position={[0, barY, stepWidth / 2 + 0.075]}
-            >
-              <meshStandardMaterial
-                color="#ffffff"
-                metalness={0.8}
-                roughness={0.2}
-              />
-            </Box>
-            <Box
-              args={[stepWidth, 0.1, 0.15]}
-              position={[0, barY, -stepWidth / 2 - 0.075]}
-            >
-              <meshStandardMaterial
-                color="#ffffff"
-                metalness={0.8}
-                roughness={0.2}
-              />
-            </Box>
-          </React.Fragment>
-        );
-      })}
+      {/* Removed horizontal bars - cleaner design with solid side walls */}
 
       {/* Floor indicator - more visible */}
       {label && (
