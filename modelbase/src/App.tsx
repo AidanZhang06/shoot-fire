@@ -10,6 +10,7 @@ import { FireVisualization } from './components/FireVisualization';
 import { ExitMarkers } from './components/ExitMarkers';
 import { FirstPersonCamera } from './components/FirstPersonCamera';
 import { Stairs } from './components/Stairs';
+import { CoordinateSystem } from './components/CoordinateSystem';
 import { ScenarioEngine } from './scenario/ScenarioEngine';
 import { NavigationGraphImpl } from './navigation/NavigationGraph';
 import { GraphBuilder } from './navigation/GraphBuilder';
@@ -37,6 +38,7 @@ function App() {
   const [currentPath, setCurrentPath] = useState<string[]>([]);
   const [currentPathIndex, setCurrentPathIndex] = useState(0);
   const [firstPersonMode, setFirstPersonMode] = useState(false);
+  const [showCoordinateAxes, setShowCoordinateAxes] = useState(false);
   const [thirdPersonCameraState, setThirdPersonCameraState] = useState({
     position: [80, 60, 80] as [number, number, number],
     target: [-15, 15, 0] as [number, number, number]
@@ -250,14 +252,81 @@ function App() {
   };
 
   return (
-    <div style={{ 
-      width: '100vw', 
-      height: '100vh', 
+    <div style={{
+      width: '100vw',
+      height: '100vh',
       display: 'flex',
       margin: 0,
       padding: 0,
       overflow: 'hidden'
     }}>
+      {/* Coordinate Axes Toggle Button */}
+      <button
+        onClick={() => {
+          const newValue = !showCoordinateAxes;
+          setShowCoordinateAxes(newValue);
+          console.log('🎯 Coordinate Axes:', newValue ? 'VISIBLE' : 'HIDDEN');
+          if (newValue) {
+            console.log('📍 Look at the bottom of the green character!');
+            console.log('  - Red line = +X (Right)');
+            console.log('  - Green line = +Y (Up)');
+            console.log('  - Blue line = +Z (Backward/Toward camera)');
+            console.log('  - Character position:', playerPosition);
+          }
+        }}
+        style={{
+          position: 'absolute',
+          top: '20px',
+          left: '20px',
+          zIndex: 1000,
+          padding: '10px 15px',
+          background: showCoordinateAxes ? '#4CAF50' : '#333',
+          color: 'white',
+          border: 'none',
+          borderRadius: '5px',
+          cursor: 'pointer',
+          fontSize: '14px',
+          fontFamily: 'monospace',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+          fontWeight: 'bold'
+        }}
+      >
+        {showCoordinateAxes ? '✓ Axes ON (at green character feet)' : 'Show Coordinate Axes'}
+      </button>
+
+      {/* Coordinate System Legend - shown when axes are visible */}
+      {showCoordinateAxes && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '70px',
+            left: '20px',
+            zIndex: 1000,
+            padding: '10px',
+            background: 'rgba(0, 0, 0, 0.8)',
+            color: 'white',
+            border: '2px solid #4CAF50',
+            borderRadius: '5px',
+            fontSize: '12px',
+            fontFamily: 'monospace',
+            maxWidth: '280px'
+          }}
+        >
+          <div style={{ fontWeight: 'bold', marginBottom: '5px', color: '#4CAF50' }}>
+            Coordinate Axes (at green character's feet):
+          </div>
+          <div style={{ color: '#ff4444' }}>🔴 Red = +X (Right)</div>
+          <div style={{ color: '#44ff44' }}>🟢 Green = +Y (Up)</div>
+          <div style={{ color: '#4444ff' }}>🔵 Blue = +Z (Backward/Toward camera)</div>
+          <div style={{ fontSize: '10px', marginTop: '5px', color: '#ffff00' }}>
+            ⚠️ Forward is -Z (opposite of blue)
+          </div>
+          <div style={{ fontSize: '10px', marginTop: '3px', color: '#aaa' }}>
+            Look at the bottom of the green character to see the colored lines!
+          </div>
+        </div>
+      )}
+
       {/* 3D Model Canvas - takes up 3/4 of the page */}
       <div style={{ width: '75%', height: '100vh' }}>
         <Canvas
@@ -273,6 +342,26 @@ function App() {
           <directionalLight position={[-50, 40, -30]} intensity={0.6} />
           <spotLight position={[0, 50, 0]} angle={Math.PI / 3} penumbra={0.5} intensity={1.5} />
           <spotLight position={[-30, 40, 0]} angle={Math.PI / 4} penumbra={0.3} intensity={1.0} color="#88ccff" />
+
+          {/* Coordinate System for visual debugging (optional) */}
+          {/* Note: Main axes are now on the character's feet - see CharacterController */}
+          {showCoordinateAxes && (
+            <>
+              {/* Optional: World origin axes for reference (commented out by default) */}
+              {/* Uncomment if you want to see world origin axes at [0,0,0] */}
+              {/* <CoordinateSystem position={[0, 0, 0]} size={30} visible={true} /> */}
+
+              {/* Optional: Floor-level reference axes */}
+              {/* Uncomment if you want axes at the floor level of your character */}
+              {/* {playerPosition && (
+                <CoordinateSystem
+                  position={[0, playerPosition[1], 0]}
+                  size={20}
+                  visible={true}
+                />
+              )} */}
+            </>
+          )}
 
           {/* Gates Building - L-shaped with detailed rooms */}
           <GatesBuilding />
@@ -360,6 +449,7 @@ function App() {
               targetPosition={targetPosition}
               currentNode={navigationGraph?.getNode(scenarioState?.playerNodeId || '')}
               onPositionUpdate={handlePositionUpdate}
+              showAxes={showCoordinateAxes}
             />
           )}
 

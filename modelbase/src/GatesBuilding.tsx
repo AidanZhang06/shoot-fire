@@ -109,26 +109,110 @@ export function GatesBuilding() {
             type: 'classroom'
           });
         } else if (floorNum === 5) {
-          // Café and social spaces
+          // Floor 5 - Large social spaces, lounges, and café
+          // Large café/dining area in west section
           rooms.push({
-            x: -mainWingWidth * 0.25,
+            x: -mainWingWidth * 0.3,
+            z: 0,
+            width: 18,
+            depth: 16,
+            label: 'La Prima Café\n& Dining Hall',
+            type: 'cafe'
+          });
+
+          // Student lounge in east section
+          rooms.push({
+            x: mainWingWidth * 0.3,
             z: 0,
             width: 16,
             depth: 14,
-            label: 'La Prima Café',
-            type: 'cafe'
+            label: 'Student Lounge\n& Common Area',
+            type: 'lounge'
           });
+
+          // Collaboration space
           rooms.push({
-            x: mainWingWidth * 0.25,
+            x: 0,
             z: 0,
-            width: 10,
-            depth: 10,
-            label: 'Dean Suite',
-            type: 'admin'
+            width: 12,
+            depth: 12,
+            label: 'Collaboration\nHub',
+            type: 'lounge'
+          });
+
+          // Side wing - large meeting/event space
+          rooms.push({
+            x: -mainWingWidth / 2 + sideWingWidth / 2,
+            z: sideWingDepth * 0.25,
+            width: sideWingWidth - 2,
+            depth: sideWingDepth * 0.4,
+            label: 'Event Space\n& Gallery',
+            type: 'lounge'
+          });
+
+          // Side wing - faculty lounge
+          rooms.push({
+            x: -mainWingWidth / 2 + sideWingWidth / 2,
+            z: sideWingDepth * 0.7,
+            width: sideWingWidth - 2,
+            depth: sideWingDepth * 0.35,
+            label: 'Faculty\nLounge',
+            type: 'lounge'
           });
         }
-      } else if (floorNum >= 6) {
-        // MODULAR floors - dense office/lab grid with central hallway
+      } else if (floorNum === 6) {
+        // Floor 6 - Large research commons, lounges, and collaborative spaces
+        // Central innovation lab (large open space)
+        rooms.push({
+          x: 0,
+          z: 0,
+          width: 20,
+          depth: 14,
+          label: 'Innovation Lab\n& Research Commons',
+          type: 'lab'
+        });
+
+        // East wing - large conference room
+        rooms.push({
+          x: mainWingWidth * 0.35,
+          z: 0,
+          width: 14,
+          depth: 12,
+          label: 'Grand Conference\nRoom',
+          type: 'conference'
+        });
+
+        // West wing - lounge and breakout spaces
+        rooms.push({
+          x: -mainWingWidth * 0.35,
+          z: 0,
+          width: 14,
+          depth: 12,
+          label: 'Research Lounge\n& Breakout Space',
+          type: 'lounge'
+        });
+
+        // Side wing - large lab/maker space
+        rooms.push({
+          x: -mainWingWidth / 2 + sideWingWidth / 2,
+          z: sideWingDepth * 0.3,
+          width: sideWingWidth - 2,
+          depth: sideWingDepth * 0.5,
+          label: 'Maker Space\n& Fabrication Lab',
+          type: 'lab'
+        });
+
+        // Side wing - project rooms
+        rooms.push({
+          x: -mainWingWidth / 2 + sideWingWidth / 2,
+          z: sideWingDepth * 0.75,
+          width: sideWingWidth - 2,
+          depth: sideWingDepth * 0.3,
+          label: 'Project Team\nRooms',
+          type: 'office'
+        });
+      } else if (floorNum >= 7) {
+        // MODULAR floors (7-9) - dense office/lab grid with central hallway
         const hallwayWidth = 2.5; // Central hallway through main wing
 
         // Main wing offices with hallway
@@ -232,24 +316,24 @@ export function GatesBuilding() {
       {building.map((level: Level, levelIndex: number) => {
         const yPos = levelIndex * floorHeight;
 
-        // Materials
+        // Materials - made walls more visible
         const outerWallMaterial = level.isGlassVolume ? (
           <meshPhysicalMaterial
-            color="#ffffff"
+            color="#e0e0e0"
             transparent
-            opacity={0.15}
-            transmission={0.95}
+            opacity={0.4}
+            transmission={0.7}
             thickness={0.5}
-            roughness={0.05}
-            metalness={0.05}
+            roughness={0.1}
+            metalness={0.2}
           />
         ) : (
           <meshStandardMaterial
-            color="#ffffff"
+            color="#cccccc"
             transparent
-            opacity={0.3}
-            metalness={0.7}
-            roughness={0.3}
+            opacity={0.6}
+            metalness={0.6}
+            roughness={0.4}
           />
         );
 
@@ -376,9 +460,15 @@ export function GatesBuilding() {
                 room.type === 'admin' ? '#4488ff' :
                 room.type === 'lab' ? '#88ff44' :
                 room.type === 'lecture' ? '#ff44ff' :
+                room.type === 'lounge' ? '#44ffff' :
+                room.type === 'conference' ? '#ff88ff' :
+                room.type === 'classroom' ? '#ffff44' :
                 '#ffffff';
 
-              const roomOpacity = (room.type === 'office' || room.type === 'lab') ? 0.05 : 0.15;
+              const roomOpacity = (room.type === 'office' || room.type === 'lab') ? 0.05 :
+                                  (room.type === 'lounge' || room.type === 'conference') ? 0.2 : 0.15;
+
+              const emissiveIntensity = (room.type === 'lounge' || room.type === 'conference' || room.type === 'cafe') ? 0.15 : 0.08;
 
               return (
                 <group key={roomIndex}>
@@ -392,7 +482,7 @@ export function GatesBuilding() {
                       transparent
                       opacity={roomOpacity}
                       emissive={roomColor}
-                      emissiveIntensity={0.08}
+                      emissiveIntensity={emissiveIntensity}
                     />
                   </Box>
 
@@ -405,7 +495,7 @@ export function GatesBuilding() {
                       transparent
                       opacity={roomOpacity}
                       emissive={roomColor}
-                      emissiveIntensity={0.08}
+                      emissiveIntensity={emissiveIntensity}
                     />
                   </Box>
 
@@ -418,7 +508,7 @@ export function GatesBuilding() {
                       transparent
                       opacity={roomOpacity}
                       emissive={roomColor}
-                      emissiveIntensity={0.08}
+                      emissiveIntensity={emissiveIntensity}
                     />
                   </Box>
 
@@ -431,7 +521,7 @@ export function GatesBuilding() {
                       transparent
                       opacity={roomOpacity}
                       emissive={roomColor}
-                      emissiveIntensity={0.08}
+                      emissiveIntensity={emissiveIntensity}
                     />
                   </Box>
 
