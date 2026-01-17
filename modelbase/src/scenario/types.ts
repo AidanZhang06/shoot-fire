@@ -23,8 +23,12 @@ export interface ScenarioState {
   availableExits: string[];
   playerPath: string[]; // Nodes the player has visited
   status: 'not_started' | 'in_progress' | 'completed' | 'failed';
-  outcome?: 'safe' | 'unsafe' | 'timeout';
+  outcome?: 'safe' | 'unsafe' | 'timeout' | 'death' | 'trapped';
   timeToSafety?: number;
+  // Player state (internal tracking)
+  playerHealth?: number;
+  playerAlive?: boolean;
+  isTrapped?: boolean; // No viable path to any exit
 }
 
 export interface ScenarioEvolution {

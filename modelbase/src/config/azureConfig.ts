@@ -17,9 +17,22 @@ export function getAzureConfig() {
   const deploymentName = import.meta.env.VITE_AZURE_DEPLOYMENT;
   const targetUri = import.meta.env.VITE_AZURE_TARGET_URI;
 
+  console.log('🔑 Azure Config Check:', {
+    hasEndpoint: !!endpoint,
+    hasApiKey: !!apiKey,
+    hasTargetUri: !!targetUri,
+    deploymentName: deploymentName || 'gpt-5-chat',
+    endpoint: endpoint ? endpoint.substring(0, 30) + '...' : 'MISSING',
+    targetUri: targetUri ? targetUri.substring(0, 50) + '...' : 'MISSING'
+  });
+
   if (!endpoint || !apiKey || !targetUri) {
-    console.warn('⚠️ Azure OpenAI configuration missing. Please check your .env file.');
-    console.warn('   Make sure you have created .env with VITE_AZURE_* variables.');
+    console.error('❌ Azure OpenAI configuration missing!');
+    console.error('   Endpoint:', endpoint ? '✓' : '✗ MISSING');
+    console.error('   API Key:', apiKey ? '✓' : '✗ MISSING');
+    console.error('   Target URI:', targetUri ? '✓' : '✗ MISSING');
+    console.error('   Make sure you have created .env with VITE_AZURE_* variables.');
+    console.error('   Restart the dev server after creating/updating .env file!');
   }
 
   return {

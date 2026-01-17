@@ -301,7 +301,7 @@ export function GatesBuilding() {
         rooms,
         offsetX,
         hasAtrium: floorNum >= 3 && floorNum <= 6,
-        isGlassVolume: floorNum >= 6 && floorNum <= 7,
+        isGlassVolume: true,
         hasHallways: floorNum >= 6,
         mainHallwayWidth: floorNum >= 6 ? 2.5 : 0,
         sideHallwayWidth: floorNum >= 6 ? 2.0 : 0

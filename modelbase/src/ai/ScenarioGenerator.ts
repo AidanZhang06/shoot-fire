@@ -2,6 +2,7 @@ import { getAzureConfig } from '../config/azureConfig';
 import { phoenixTracer } from '../config/arizeConfig';
 import { ScenarioGenerationInput, ScenarioGenerationOutput, FireScenario } from './types';
 import { scenarioGenerationPrompts } from './prompts';
+import { mockScenarioGenerator } from './MockScenarioGenerator';
 
 export class ScenarioGenerator {
   private config: ReturnType<typeof getAzureConfig>;
@@ -35,26 +36,55 @@ export class ScenarioGenerator {
         temperature: 0.7
       });
 
-      // Call Azure OpenAI via REST API
-      const response = await fetch(this.config.targetUri, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'api-key': this.config.apiKey
-        },
-        body: JSON.stringify({
-          messages: [
-            { role: 'system', content: scenarioGenerationPrompts.system },
-            { role: 'user', content: userPrompt }
-          ],
-          temperature: 0.7,
-          max_tokens: 2000,
-          response_format: { type: 'json_object' }
-        })
-      });
+      // Check if we have valid config
+      if (!this.config.apiKey || !this.config.targetUri) {
+        console.warn('⚠️ Azure OpenAI config missing, using mock scenario generator');
+        return await mockScenarioGenerator.generateScenario(input);
+      }
+
+      let response: Response;
+      try {
+        // Call Azure OpenAI via REST API
+        console.log('📡 Calling Azure OpenAI API...', {
+          targetUri: this.config.targetUri.substring(0, 60) + '...',
+          hasApiKey: !!this.config.apiKey,
+          deploymentName: this.config.deploymentName
+        });
+
+        response = await fetch(this.config.targetUri, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'api-key': this.config.apiKey
+          },
+          body: JSON.stringify({
+            messages: [
+              { role: 'system', content: scenarioGenerationPrompts.system },
+              { role: 'user', content: userPrompt }
+            ],
+            temperature: 0.7,
+            max_tokens: 2000,
+            response_format: { type: 'json_object' }
+          })
+        });
+
+        console.log('📥 API Response status:', response.status, response.statusText);
+      } catch (fetchError) {
+        // Network error or CORS issue - use mock
+        console.warn('⚠️ API call failed (likely CORS or network issue), using mock scenario:', fetchError);
+        return await mockScenarioGenerator.generateScenario(input);
+      }
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('❌ API Error Response:', errorText);
+        
+        // If it's a CORS error or auth error, fall back to mock
+        if (response.status === 0 || response.status === 401 || response.status === 403) {
+          console.warn('⚠️ API authentication/access issue, using mock scenario generator');
+          return await mockScenarioGenerator.generateScenario(input);
+        }
+        
         throw new Error(`Azure OpenAI API error: ${response.status} - ${errorText}`);
       }
 
@@ -83,15 +113,32 @@ export class ScenarioGenerator {
       // Transform to FireScenario format - ensure all arrays are defined
       // Default start position: center of floor 6 main wing (inside building)
       const defaultStartPos: [number, number, number] = [0, 21, 0]; // x=0 (center), y=21 (floor 6), z=0 (center)
+      
+      // Handle smokeAreas - check for both 'nodes' and 'affectedNodes' fields (prompt uses affectedNodes)
+      const smokeAreas = Array.isArray(scenarioData.smokeAreas) 
+        ? scenarioData.smokeAreas.map((sa: any) => ({
+            nodes: Array.isArray(sa.nodes) ? sa.nodes : (Array.isArray(sa.affectedNodes) ? sa.affectedNodes : []),
+            level: typeof sa.level === 'number' ? Math.max(0, Math.min(1, sa.level)) : 0,
+            region: sa.region || 'Unknown area'
+          }))
+        : [];
+      
+      // Handle fireLocations - ensure proper format
+      const fireLocations = Array.isArray(scenarioData.fireLocations) 
+        ? scenarioData.fireLocations.map((fl: any) => ({
+            position: Array.isArray(fl.position) && fl.position.length === 3 ? fl.position : defaultStartPos,
+            intensity: typeof fl.intensity === 'number' ? Math.max(0, Math.min(1, fl.intensity)) : 0.5,
+            description: fl.description || 'Fire location'
+          }))
+        : [];
+      
       const scenario: FireScenario = {
         id: `scenario-${Date.now()}`,
-        startPosition: Array.isArray(scenarioData.startPosition) ? scenarioData.startPosition : defaultStartPos,
-        fireLocations: Array.isArray(scenarioData.fireLocations) ? scenarioData.fireLocations : [],
-        smokeAreas: Array.isArray(scenarioData.smokeAreas) ? scenarioData.smokeAreas.map((sa: any) => ({
-          nodes: Array.isArray(sa.nodes) ? sa.nodes : [],
-          level: typeof sa.level === 'number' ? sa.level : 0,
-          region: sa.region
-        })) : [],
+        startPosition: Array.isArray(scenarioData.startPosition) && scenarioData.startPosition.length === 3
+          ? scenarioData.startPosition 
+          : defaultStartPos,
+        fireLocations,
+        smokeAreas,
         blockedPaths: Array.isArray(scenarioData.blockedPaths) ? scenarioData.blockedPaths : [],
         blockedNodes: Array.isArray(scenarioData.blockedNodes) ? scenarioData.blockedNodes : [],
         // Ensure availableExits includes actual exit IDs from FireExits
@@ -101,8 +148,11 @@ export class ScenarioGenerator {
           : ['exit-6-east', 'exit-6-west', 'exit-6-south'], // Default to floor 6 exits
         correctPath: Array.isArray(scenarioData.correctPath) ? scenarioData.correctPath : [],
         description: scenarioData.description || 'Fire scenario',
-        difficulty: scenarioData.difficulty || 'medium',
-        estimatedTimeToSafety: scenarioData.estimatedTimeToSafety || 120
+        difficulty: scenarioData.difficulty || input.difficulty || 'medium',
+        estimatedTimeToSafety: typeof scenarioData.estimatedTimeToSafety === 'number' 
+          ? scenarioData.estimatedTimeToSafety 
+          : 120,
+        safetyNotes: scenarioData.safetyNotes || 'Follow fire safety protocols and use the nearest safe exit.'
       };
 
       const traceEnd = Date.now();

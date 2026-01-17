@@ -1,102 +1,93 @@
-import React, { useRef, useEffect, useState, useMemo } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { GreenDotPerson } from '../GreenDotPerson';
-import { MovementAnimation } from '../animation/MovementAnimation';
 import { NavigationNode } from '../navigation/types';
 
 interface CharacterControllerProps {
   position: [number, number, number];
   targetPosition?: [number, number, number];
   currentNode?: NavigationNode;
-  onPositionUpdate?: (position: [number, number, number], nodeId?: string) => void;
+  onPositionUpdate?: (position: [number, number, number]) => void;
   showAxes?: boolean;
+  rotation?: number; // Facing direction in radians
+  speedMultiplier?: number;
 }
 
 export function CharacterController({
-  position: initialPosition,
+  position,
   targetPosition,
   currentNode,
   onPositionUpdate,
-  showAxes = false
+  showAxes = false,
+  rotation = 0,
+  speedMultiplier = 1.0
 }: CharacterControllerProps) {
-  const [currentPosition, setCurrentPosition] = useState<[number, number, number]>(initialPosition);
-  const [animation, setAnimation] = useState<MovementAnimation | null>(null);
-  const groupRef = useRef<THREE.Group | null>(null);
+  const groupRef = useRef<THREE.Group>(null);
+  const currentPosRef = useRef(new THREE.Vector3(...position));
+  const targetPosRef = useRef(new THREE.Vector3(...position));
+  const currentRotationRef = useRef(rotation);
 
-  // Create axes helper (memoized so it doesn't recreate every render)
-  // Size 8 makes axes large enough to see all three colors clearly
-  const axesHelper = useMemo(() => new THREE.AxesHelper(8), []);
-
-  // Update position when target changes
+  // Update target when it changes
   useEffect(() => {
     if (targetPosition) {
-      try {
-        const distance = Math.sqrt(
-          Math.pow(targetPosition[0] - currentPosition[0], 2) +
-          Math.pow(targetPosition[1] - currentPosition[1], 2) +
-          Math.pow(targetPosition[2] - currentPosition[2], 2)
-        );
-
-        // Only animate if distance is significant
-        if (distance > 0.1) {
-          const duration = MovementAnimation.calculateDuration(currentPosition, targetPosition, 2);
-          const newAnimation = new MovementAnimation(
-            currentPosition,
-            targetPosition,
-            duration,
-            () => {
-              setAnimation(null);
-              if (onPositionUpdate) {
-                onPositionUpdate(targetPosition, currentNode?.id);
-              }
-            }
-          );
-          setAnimation(newAnimation);
-        } else {
-          // Already at target
-          setCurrentPosition(targetPosition);
-          if (onPositionUpdate) {
-            onPositionUpdate(targetPosition, currentNode?.id);
-          }
-        }
-      } catch (error) {
-        console.error('Error updating character position:', error);
-      }
+      targetPosRef.current.set(...targetPosition);
     }
-  }, [targetPosition, currentPosition, currentNode, onPositionUpdate]);
+  }, [targetPosition]);
 
-  // Update position when initial position changes (but not animating)
-  useEffect(() => {
-    if (!animation && !targetPosition) {
-      setCurrentPosition(initialPosition);
-    }
-  }, [initialPosition]);
+  // Smooth movement animation
+  useFrame((_, delta) => {
+    if (!groupRef.current) return;
 
-  // Animation loop
-  useFrame(() => {
-    if (animation) {
-      const newPos = animation.getCurrentPosition();
-      if (newPos) {
-        setCurrentPosition(newPos);
-        if (groupRef.current) {
-          groupRef.current.position.set(newPos[0], newPos[1], newPos[2]);
-        }
-      }
-    } else if (groupRef.current) {
-      groupRef.current.position.set(currentPosition[0], currentPosition[1], currentPosition[2]);
+    const speed = 5 * speedMultiplier * delta;
+    
+    // Smoothly interpolate position
+    currentPosRef.current.lerp(targetPosRef.current, speed);
+    groupRef.current.position.copy(currentPosRef.current);
+
+    // Smoothly interpolate rotation
+    const rotationSpeed = 5 * delta;
+    currentRotationRef.current += (rotation - currentRotationRef.current) * rotationSpeed;
+    groupRef.current.rotation.y = currentRotationRef.current;
+
+    // Notify parent of position update
+    if (onPositionUpdate) {
+      const pos = currentPosRef.current;
+      onPositionUpdate([pos.x, pos.y, pos.z]);
     }
   });
 
   return (
-    <group ref={groupRef}>
-      <GreenDotPerson position={[0, 0, 0]} />
-
-      {/* Coordinate axes at the bottom of the character (at their feet) */}
+    <group ref={groupRef} position={position}>
+      {/* Character */}
+      <GreenDotPerson />
+      
+      {/* Direction indicator arrow */}
+      <mesh position={[0.8, 0.5, 0]} rotation={[0, 0, -Math.PI / 2]}>
+        <coneGeometry args={[0.2, 0.5, 8]} />
+        <meshStandardMaterial color="#00ff00" emissive="#00ff00" emissiveIntensity={0.5} />
+      </mesh>
+      
+      {/* Coordinate axes (optional) */}
       {showAxes && (
-        <primitive object={axesHelper} position={[0, 0, 0]} />
+        <group>
+          {/* X axis - Red */}
+          <mesh position={[1, 0, 0]}>
+            <boxGeometry args={[2, 0.05, 0.05]} />
+            <meshBasicMaterial color="red" />
+          </mesh>
+          {/* Y axis - Green */}
+          <mesh position={[0, 1, 0]}>
+            <boxGeometry args={[0.05, 2, 0.05]} />
+            <meshBasicMaterial color="green" />
+          </mesh>
+          {/* Z axis - Blue */}
+          <mesh position={[0, 0, 1]}>
+            <boxGeometry args={[0.05, 0.05, 2]} />
+            <meshBasicMaterial color="blue" />
+          </mesh>
+        </group>
       )}
     </group>
   );
 }
-

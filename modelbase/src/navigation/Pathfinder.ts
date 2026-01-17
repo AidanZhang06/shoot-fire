@@ -153,6 +153,38 @@ export class Pathfinder {
     return true;
   }
 
+  // Validate path at current time (check if still valid)
+  validatePath(path: string[]): { valid: boolean; reason?: string; blockedNodeId?: string } {
+    if (path.length === 0) {
+      return { valid: false, reason: 'Path is empty' };
+    }
+
+    for (let i = 0; i < path.length; i++) {
+      const nodeId = path[i];
+      const node = this.graph.getNode(nodeId);
+      
+      if (!node) {
+        return { valid: false, reason: 'Node not found', blockedNodeId: nodeId };
+      }
+
+      if (node.blocked) {
+        return { valid: false, reason: 'Path blocked by fire or collapse', blockedNodeId: nodeId };
+      }
+
+      // Check edges between nodes
+      if (i < path.length - 1) {
+        const nextNodeId = path[i + 1];
+        const edge = this.graph.getEdge(nodeId, nextNodeId);
+        
+        if (!edge || edge.blocked) {
+          return { valid: false, reason: 'Path edge blocked', blockedNodeId: nodeId };
+        }
+      }
+    }
+
+    return { valid: true };
+  }
+
   // Get all reachable nodes from a starting point
   getReachableNodes(startId: string, maxDistance: number = Infinity): string[] {
     const visited = new Set<string>();

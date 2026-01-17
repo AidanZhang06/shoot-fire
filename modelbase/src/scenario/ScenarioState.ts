@@ -2,11 +2,14 @@ import { ScenarioState, ScenarioEvolution } from './types';
 import { FireScenario } from '../ai/types';
 import { NavigationGraphImpl } from '../navigation/NavigationGraph';
 import { fireExits } from '../navigation/FireExits';
+import { PlayerStateManager } from '../player/PlayerState';
 
 export class ScenarioStateManager {
   private state: ScenarioState;
   private graph: NavigationGraphImpl;
   private evolutionConfig: ScenarioEvolution;
+  private playerState: PlayerStateManager;
+  private lastUpdateTime: number;
 
   constructor(scenario: FireScenario, graph: NavigationGraphImpl) {
     this.graph = graph;
@@ -17,13 +20,20 @@ export class ScenarioStateManager {
       timeStep: 5 // Update every 5 seconds
     };
 
+    // Initialize player state
+    this.playerState = new PlayerStateManager(scenario.startPosition);
+    this.lastUpdateTime = Date.now();
+
+    // Calculate current floor from start position
+    const currentFloor = Math.floor(scenario.startPosition[1] / 3.5) + 1;
+    
     // Initialize state from scenario
     this.state = {
       scenarioId: scenario.id,
       startTime: Date.now(),
       currentTime: Date.now(),
       playerPosition: scenario.startPosition,
-      currentFloor: Math.floor(scenario.startPosition[1] / 3.5) + 1, // Assuming 3.5m floor height
+      currentFloor: currentFloor,
       fireLocations: (scenario.fireLocations || []).map(fire => ({
         ...fire,
         startTime: Date.now()
@@ -34,10 +44,22 @@ export class ScenarioStateManager {
       // If no exits specified, use all exits on the starting floor
       availableExits: scenario.availableExits && scenario.availableExits.length > 0
         ? [...scenario.availableExits]
-        : fireExits.filter(e => e.floor === this.state.currentFloor).map(e => e.id),
+        : fireExits.filter(e => e.floor === currentFloor).map(e => e.id),
       playerPath: [],
-      status: 'not_started'
+      status: 'not_started',
+      playerHealth: 100,
+      playerAlive: true,
+      isTrapped: false
     };
+    
+    console.log('📊 ScenarioState initialized:', {
+      scenarioId: this.state.scenarioId,
+      fireLocations: this.state.fireLocations.length,
+      smokeAreas: this.state.smokeAreas.length,
+      blockedNodes: this.state.blockedNodes.length,
+      availableExits: this.state.availableExits.length,
+      currentFloor: this.state.currentFloor
+    });
 
     // Apply initial scenario to graph
     this.applyScenarioToGraph(scenario);
@@ -60,16 +82,37 @@ export class ScenarioStateManager {
     this.state.playerNodeId = nodeId;
     this.state.currentFloor = Math.floor(position[1] / 3.5) + 1;
     
+    // Update player state position
+    this.playerState.updatePosition(position);
+    
     if (nodeId && !this.state.playerPath.includes(nodeId)) {
       this.state.playerPath.push(nodeId);
     }
 
+    // Update player state based on current environment
+    this.updatePlayerStateFromEnvironment();
+
     // Check if player reached an exit
     if (nodeId && this.state.availableExits.includes(nodeId)) {
-      this.complete('safe');
+      if (this.state.playerAlive) {
+        this.complete('safe');
+      }
     }
 
-    // Check if player is in danger
+    // Check if player is dead
+    if (!this.state.playerAlive) {
+      this.complete('death');
+      return;
+    }
+
+    // Check if player is trapped (no viable path to any exit)
+    if (this.checkIfTrapped()) {
+      this.state.isTrapped = true;
+      this.complete('trapped');
+      return;
+    }
+
+    // Check if player is in danger (legacy check)
     if (this.isPlayerInDanger()) {
       this.complete('unsafe');
     }
@@ -80,6 +123,26 @@ export class ScenarioStateManager {
 
     this.state.currentTime = Date.now();
     const elapsed = (this.state.currentTime - this.state.startTime) / 1000;
+
+    // Update player state continuously based on environment
+    const now = Date.now();
+    const deltaTime = (now - this.lastUpdateTime) / 1000; // Convert to seconds
+    this.lastUpdateTime = now;
+    
+    if (deltaTime > 0 && deltaTime < 1) { // Only update if reasonable delta
+      this.updatePlayerStateFromEnvironment(deltaTime);
+      
+      // Sync player state to scenario state
+      const playerState = this.playerState.getState();
+      this.state.playerHealth = playerState.health;
+      this.state.playerAlive = playerState.alive;
+      
+      // Check if player died
+      if (!playerState.alive) {
+        this.complete('death');
+        return;
+      }
+    }
 
     // Fire spreads over time
     if (this.evolutionConfig.fireSpread) {
@@ -198,13 +261,97 @@ export class ScenarioStateManager {
     return false;
   }
 
-  private complete(outcome: 'safe' | 'unsafe' | 'timeout'): void {
+  private complete(outcome: 'safe' | 'unsafe' | 'timeout' | 'death' | 'trapped'): void {
     this.state.status = 'completed';
     this.state.outcome = outcome;
     
     if (outcome === 'safe') {
       this.state.timeToSafety = (this.state.currentTime - this.state.startTime) / 1000;
     }
+  }
+
+  // Update player state based on current environment (fire/smoke)
+  private updatePlayerStateFromEnvironment(deltaTime: number = 0.1): void {
+    if (!this.state.playerNodeId) return;
+
+    const playerNode = this.graph.getNode(this.state.playerNodeId);
+    if (!playerNode) return;
+
+    // Check if player is in fire
+    const isInFire = this.state.fireLocations.some(fire => {
+      if (fire.nodeId === playerNode.id) return true;
+      const distance = Math.sqrt(
+        Math.pow(playerNode.position[0] - fire.position[0], 2) +
+        Math.pow(playerNode.position[2] - fire.position[2], 2)
+      );
+      return distance < 2 && fire.intensity > 0.5;
+    });
+
+    // Get smoke level at current node
+    const smokeLevel = playerNode.smokeLevel || 0;
+
+    // Update player state
+    this.playerState.updateFromEnvironment(isInFire, smokeLevel, deltaTime);
+  }
+
+  // Check if player is trapped (no viable path to any exit)
+  private checkIfTrapped(): boolean {
+    if (!this.state.playerNodeId) return false;
+
+    // Check if there's a path to any available exit
+    const exits = this.graph.getExits();
+    const availableExits = exits.filter(e => this.state.availableExits.includes(e.id));
+
+    if (availableExits.length === 0) return true;
+
+    // Try to find path to each exit
+    for (const exit of availableExits) {
+      const path = this.findPathToNode(this.state.playerNodeId!, exit.id);
+      if (path && path.length > 0) {
+        return false; // Found a viable path
+      }
+    }
+
+    return true; // No viable path to any exit
+  }
+
+  // Simple pathfinding helper (uses graph directly)
+  private findPathToNode(startId: string, goalId: string): string[] | null {
+    const visited = new Set<string>();
+    const queue: Array<{ id: string; path: string[] }> = [{ id: startId, path: [startId] }];
+
+    while (queue.length > 0) {
+      const { id, path } = queue.shift()!;
+
+      if (visited.has(id)) continue;
+      visited.add(id);
+
+      if (id === goalId) {
+        return path;
+      }
+
+      const node = this.graph.getNode(id);
+      if (!node || node.blocked) continue;
+
+      for (const neighborId of node.neighbors) {
+        if (visited.has(neighborId)) continue;
+
+        const neighbor = this.graph.getNode(neighborId);
+        if (!neighbor || neighbor.blocked) continue;
+
+        const edge = this.graph.getEdge(id, neighborId);
+        if (!edge || edge.blocked) continue;
+
+        queue.push({ id: neighborId, path: [...path, neighborId] });
+      }
+    }
+
+    return null;
+  }
+
+  // Get player state manager (for speed multiplier)
+  getPlayerStateManager(): PlayerStateManager {
+    return this.playerState;
   }
 
   private applyScenarioToGraph(scenario: FireScenario): void {
