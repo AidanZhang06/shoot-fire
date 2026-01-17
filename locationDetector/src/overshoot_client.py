@@ -20,66 +20,122 @@ class OvershootVisionClient:
     """Client for interacting with Overshoot Vision API."""
 
     # Carefully engineered prompt for indoor localization metadata extraction
-    EXTRACTION_PROMPT = """You are a visual perception system for indoor navigation. Your ONLY job is to extract structured observations from a smartphone camera image.
+    EXTRACTION_PROMPT = """You are a visual perception system for indoor navigation. Your ONLY job is to extract NAVIGATION-CRITICAL observations from a smartphone camera image.
 
 CRITICAL RULES:
 1. DO NOT infer the user's location or position in a building
 2. DO NOT reference or assume knowledge of floor plans
 3. ONLY describe what you directly see in the image
-4. If something is ambiguous or partially visible, include it with lower confidence
-5. Return ONLY valid JSON - no extra text, explanations, or markdown
+4. FOCUS ONLY on navigation-relevant information (room numbers, arrows, floor signs, landmarks)
+5. IGNORE non-navigation text (posters, advertisements, notices, decorative text)
+6. Return ONLY valid JSON - no extra text, explanations, or markdown
 
 YOUR TASK:
-Analyze this smartphone camera image taken indoors and extract:
+Analyze this smartphone camera image taken indoors and extract ONLY navigation-critical information:
 
 1. **Scene Type**: Classify the environment
    - Options: hallway, room, lobby, stairwell, elevator_area, corridor_intersection, entrance, unknown
    - Provide confidence (0.0-1.0)
 
-2. **Text Detection**: Find ALL readable text
-   - Room numbers (e.g., "312", "Room 401")
-   - Floor indicators (e.g., "Floor 3", "3F", "Level 2")
-   - Directional signs (e.g., "EXIT →", "STAIRS", "← Rooms 300-350")
-   - Safety signage (e.g., "EMERGENCY EXIT")
-   - For each text item, provide confidence score
+2. **Navigation Text ONLY**: Extract ONLY these types of text
 
-3. **Landmarks**: Identify physical features with spatial context
-   - Types: door, staircase, elevator, exit_sign, fire_extinguisher, room_number_plaque,
-     elevator_button_panel, emergency_exit_door, restroom_sign, water_fountain, floor_directory
-   - Direction relative to camera: left, right, ahead, behind
-   - Distance estimate: near (< 2m), mid (2-5m), far (> 5m)
-   - Confidence for each landmark
-   - Optional additional info (e.g., "door is open", "elevator doors closed")
+   ✅ EXTRACT (Navigation-Critical):
+   - Room/Suite numbers on doors or plaques (e.g., "312", "Suite 401", "Room B-204")
+   - Floor level indicators (e.g., "Floor 3", "3F", "Level 2", "3rd Floor")
+   - Directional arrows and signs (e.g., "→", "← Rooms 300-350", "EXIT →", "STAIRS ↑")
+   - Hallway/wing identifiers (e.g., "Wing A", "South Hall", "300 Block")
+   - Emergency exit signs ("EXIT", "EMERGENCY EXIT", "FIRE EXIT")
 
-4. **Image Quality Assessment**:
+   ❌ IGNORE (Not Navigation-Critical):
+   - Poster text, flyers, advertisements
+   - Event announcements, schedules
+   - Informational notices, rules, policies
+   - Decorative text, artwork descriptions
+   - General informational signs that don't help with navigation
+
+   For each navigation text item:
+   - Provide exact text as shown
+   - Include confidence score
+   - Note if it includes directional arrows (→, ←, ↑, ↓)
+
+3. **Navigation Landmarks**: Identify physical features with PRECISE spatial context
+
+   Landmark Types (navigation-relevant only):
+   - door (with or without room number visible)
+   - staircase, stairs_up, stairs_down
+   - elevator, elevator_button_panel
+   - exit_sign (illuminated exit signs)
+   - room_number_plaque (plaques showing room numbers)
+   - hallway_intersection, corridor_junction
+   - floor_directory (building directory boards)
+
+   For EACH landmark, provide:
+   - Type (from list above)
+   - Direction: left, right, ahead, behind
+   - Distance with MORE PRECISION:
+     * "very_close" (< 5 feet / 1.5m) - almost touching distance
+     * "near" (5-10 feet / 1.5-3m) - a few steps away
+     * "mid" (10-20 feet / 3-6m) - across the hallway
+     * "far" (> 20 feet / 6m+) - down the corridor
+   - Confidence score
+   - Additional spatial info:
+     * "slightly_left", "far_left", "directly_ahead", "far_right", etc.
+     * Door state: "open", "closed", "ajar"
+     * For intersections: "T-junction", "4-way", "Y-junction"
+
+4. **Relative Position Cues**: Describe spatial relationships
+   - "Door 312 is 5 feet to the left"
+   - "Exit sign ahead, approximately 15 feet"
+   - "Staircase entrance on the right, very close"
+   - "Hallway intersection ahead, about 20 feet"
+
+5. **Image Quality Assessment**:
    - Lighting: good, dim, poor, backlit
-   - Motion blur: true/false (handheld phone may have shake)
+   - Motion blur: true/false
    - Frame quality score (0.0-1.0)
 
+SPATIAL PRECISION GUIDELINES:
+- Use "very_close" when landmark is within arm's reach
+- Use "near" when you could reach it in 2-3 steps
+- Use "mid" when it's across the hallway or room
+- Use "far" when it's down the corridor or across a large space
+- Always combine with direction: "very_close on the left", "far ahead and slightly right"
+
 HANDLING EDGE CASES:
-- Motion blur: Still extract what you can, flag blur, lower confidence
-- Partial signage: Include partial text with lower confidence (e.g., "Ro..." → confidence 0.4)
-- Occlusions: If you see part of a landmark, include it with reduced confidence
-- Poor lighting: Extract visible information, note lighting quality
-- Multiple similar objects: List all of them separately with spatial distinctions
-- Ambiguous scene: Use "unknown" scene type with low confidence
+- Motion blur: Extract what you can, flag blur, lower confidence
+- Partial text: Include if it's navigation-relevant (e.g., "Ro 31" → confidence 0.4)
+- Ignore partial poster text or advertisements
+- Multiple doors: List each separately with precise spatial distinctions
+- Hallway intersections: Note all visible directions
 
 OUTPUT FORMAT (strict JSON):
 {
   "scene_type": "hallway",
   "scene_confidence": 0.94,
   "text_detected": [
-    {"text": "Floor 3", "confidence": 0.92},
-    {"text": "Room 312", "confidence": 0.88}
+    {"text": "Floor 3", "confidence": 0.92, "includes_arrow": false},
+    {"text": "→ 300-350", "confidence": 0.88, "includes_arrow": true},
+    {"text": "312", "confidence": 0.91, "includes_arrow": false}
   ],
   "landmarks": [
+    {
+      "type": "door",
+      "direction": "left",
+      "distance": "very_close",
+      "confidence": 0.89,
+      "additional_info": "closed, room number visible"
+    },
     {
       "type": "exit_sign",
       "direction": "ahead",
       "distance": "mid",
       "confidence": 0.91,
-      "additional_info": null
+      "additional_info": "illuminated"
     }
+  ],
+  "relative_position_cues": [
+    "Door with room number is 5 feet to the left",
+    "Exit sign approximately 15 feet ahead"
   ],
   "lighting_quality": "good",
   "motion_blur_detected": false,
@@ -87,7 +143,7 @@ OUTPUT FORMAT (strict JSON):
   "processing_notes": null
 }
 
-REMEMBER: You are a SENSOR, not a localizer. Extract observations, not conclusions about position."""
+REMEMBER: You are a SENSOR for NAVIGATION. Extract only navigation-critical observations. Ignore everything else."""
 
     def __init__(self, settings: Settings):
         """Initialize client with configuration."""

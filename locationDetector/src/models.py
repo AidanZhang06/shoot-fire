@@ -11,6 +11,10 @@ class TextDetection(BaseModel):
     """Detected text from camera frame with confidence score."""
     text: str = Field(..., description="Detected text content")
     confidence: float = Field(..., ge=0.0, le=1.0, description="Detection confidence (0-1)")
+    includes_arrow: bool = Field(
+        default=False,
+        description="Whether text includes directional arrows (→, ←, ↑, ↓)"
+    )
 
     @field_validator('text')
     @classmethod
@@ -25,6 +29,8 @@ class Landmark(BaseModel):
     type: Literal[
         "door",
         "staircase",
+        "stairs_up",
+        "stairs_down",
         "elevator",
         "exit_sign",
         "fire_extinguisher",
@@ -33,22 +39,24 @@ class Landmark(BaseModel):
         "emergency_exit_door",
         "restroom_sign",
         "water_fountain",
-        "floor_directory"
+        "floor_directory",
+        "hallway_intersection",
+        "corridor_junction"
     ] = Field(..., description="Type of landmark detected")
 
     direction: Literal["left", "right", "ahead", "behind"] = Field(
         ..., description="Landmark direction relative to camera view"
     )
 
-    distance: Literal["near", "mid", "far"] = Field(
-        ..., description="Approximate distance category"
+    distance: Literal["very_close", "near", "mid", "far"] = Field(
+        ..., description="Precise distance category: very_close (<5ft), near (5-10ft), mid (10-20ft), far (>20ft)"
     )
 
     confidence: float = Field(..., ge=0.0, le=1.0, description="Detection confidence (0-1)")
 
     additional_info: Optional[str] = Field(
         None,
-        description="Optional additional context (e.g., door state: open/closed)"
+        description="Optional additional context (e.g., door state, spatial details)"
     )
 
 
@@ -82,6 +90,11 @@ class IndoorMetadata(BaseModel):
     landmarks: list[Landmark] = Field(
         default_factory=list,
         description="Physical landmarks visible in frame with spatial cues"
+    )
+
+    relative_position_cues: list[str] = Field(
+        default_factory=list,
+        description="Natural language descriptions of spatial relationships (e.g., 'Door 312 is 5 feet to the left')"
     )
 
     lighting_quality: Literal["good", "dim", "poor", "backlit"] = Field(
