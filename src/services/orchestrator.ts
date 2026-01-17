@@ -19,6 +19,9 @@ export class EvacuationOrchestrator {
   private readonly CYCLE_INTERVAL = 1000; // 1 second
   private readonly HAZARD_PROXIMITY_RADIUS = 5; // meters
 
+  // Feature flags
+  private readonly ENABLE_GUIDANCE_DELIVERY = false; // Set to true when accurate positioning is implemented
+
   // State
   private users: Map<string, UserState>;
   private exits: Map<string, ExitInfo>;
@@ -156,28 +159,32 @@ export class EvacuationOrchestrator {
       console.log(`  ✓ Computed ${routes.size} paths (${pathTime}ms)`);
 
       // Phase 3: Guidance Delivery
-      console.log('[Orchestrator] Phase 3: Guidance Delivery...');
-      const guidanceStart = Date.now();
+      if (this.ENABLE_GUIDANCE_DELIVERY) {
+        console.log('[Orchestrator] Phase 3: Guidance Delivery...');
+        const guidanceStart = Date.now();
 
-      for (const [userId, route] of routes) {
-        const user = this.users.get(userId);
-        if (!user) continue;
+        for (const [userId, route] of routes) {
+          const user = this.users.get(userId);
+          if (!user) continue;
 
-        // Get immediate hazards near user
-        const immediateHazards = this.getImmediateHazards(
-          user.position,
-          this.HAZARD_PROXIMITY_RADIUS
-        );
+          // Get immediate hazards near user
+          const immediateHazards = this.getImmediateHazards(
+            user.position,
+            this.HAZARD_PROXIMITY_RADIUS
+          );
 
-        try {
-          this.guidanceDelivery.sendGuidance(userId, route, user, immediateHazards);
-        } catch (error: any) {
-          console.error(`  ! Guidance delivery error for user ${userId}: ${error.message}`);
+          try {
+            this.guidanceDelivery.sendGuidance(userId, route, user, immediateHazards);
+          } catch (error: any) {
+            console.error(`  ! Guidance delivery error for user ${userId}: ${error.message}`);
+          }
         }
-      }
 
-      const guidanceTime = Date.now() - guidanceStart;
-      console.log(`  ✓ Delivered guidance to ${routes.size} users (${guidanceTime}ms)`);
+        const guidanceTime = Date.now() - guidanceStart;
+        console.log(`  ✓ Delivered guidance to ${routes.size} users (${guidanceTime}ms)`);
+      } else {
+        console.log('[Orchestrator] Phase 3: Guidance Delivery DISABLED (waiting for accurate positioning)');
+      }
 
       // Metrics
       this.lastCycleTime = Date.now() - cycleStart;
