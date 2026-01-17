@@ -19,12 +19,14 @@ export function ConnectingBridges() {
           <group key={floorNum} position={[-30, yPos, 0]}>
             {/* Main bridge structure */}
             <Box args={[bridgeLength, bridgeHeight, bridgeWidth]}>
-              <meshStandardMaterial
+              <meshPhysicalMaterial
                 color="#ffffff"
                 transparent
-                opacity={0.4}
-                emissive="#4444ff"
-                emissiveIntensity={0.25}
+                opacity={0.15}
+                transmission={0.95}
+                thickness={0.5}
+                roughness={0.05}
+                metalness={0.05}
               />
             </Box>
 
@@ -33,12 +35,14 @@ export function ConnectingBridges() {
               args={[bridgeLength, bridgeHeight - 0.5, 0.1]}
               position={[0, 0, bridgeWidth / 2]}
             >
-              <meshStandardMaterial
-                color="#88ccff"
+              <meshPhysicalMaterial
+                color="#ffffff"
                 transparent
-                opacity={0.3}
-                emissive="#0088ff"
-                emissiveIntensity={0.3}
+                opacity={0.1}
+                transmission={0.95}
+                thickness={0.3}
+                roughness={0.05}
+                metalness={0.05}
               />
             </Box>
 
@@ -46,12 +50,14 @@ export function ConnectingBridges() {
               args={[bridgeLength, bridgeHeight - 0.5, 0.1]}
               position={[0, 0, -bridgeWidth / 2]}
             >
-              <meshStandardMaterial
-                color="#88ccff"
+              <meshPhysicalMaterial
+                color="#ffffff"
                 transparent
-                opacity={0.3}
-                emissive="#0088ff"
-                emissiveIntensity={0.3}
+                opacity={0.1}
+                transmission={0.95}
+                thickness={0.3}
+                roughness={0.05}
+                metalness={0.05}
               />
             </Box>
 

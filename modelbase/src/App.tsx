@@ -1,18 +1,17 @@
 import React from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Stars } from '@react-three/drei';
+import { OrbitControls } from '@react-three/drei';
 import { GatesBuilding } from './GatesBuilding';
 import { HillmanBuilding } from './HillmanBuilding';
 import { ConnectingBridges } from './ConnectingBridges';
-import { DoubleHelixStaircase } from './DoubleHelixStaircase';
-import { CampusEnvironment } from './CampusEnvironment';
+import { GreenDotPerson } from './GreenDotPerson';
 
 function App() {
   return (
     <div style={{ width: '100vw', height: '100vh' }}>
       <Canvas
         camera={{ position: [80, 60, 80], fov: 75 }}
-        style={{ background: '#1a1a2e' }}
+        style={{ background: '#a0a0a0' }}
       >
         {/* Lighting */}
         <ambientLight intensity={0.5} color="#6666ff" />
@@ -21,13 +20,7 @@ function App() {
         <spotLight position={[0, 50, 0]} angle={Math.PI / 3} penumbra={0.5} intensity={1.5} />
         <spotLight position={[-30, 40, 0]} angle={Math.PI / 4} penumbra={0.3} intensity={1.0} color="#88ccff" />
 
-        {/* Background stars for atmosphere */}
-        <Stars radius={150} depth={80} count={5000} factor={4} saturation={0} fade speed={1} />
-
-        {/* Campus Environment - roads, sidewalks, parking, trees */}
-        <CampusEnvironment />
-
-        {/* Gates Building - Carnegie Mellon */}
+        {/* Gates Building - L-shaped with detailed rooms */}
         <GatesBuilding />
 
         {/* Hillman Building */}
@@ -36,8 +29,8 @@ function App() {
         {/* Connecting Bridges between buildings */}
         <ConnectingBridges />
 
-        {/* Double Helix Staircase in the center atrium */}
-        <DoubleHelixStaircase />
+        {/* Green Dot Person */}
+        <GreenDotPerson position={[10, 0, 15]} />
 
         {/* Camera controls */}
         <OrbitControls
