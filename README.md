@@ -1,4 +1,4 @@
-# Shoot-Fire: Fire Safety Evacuation Training & Emergency Guidance System
+#FireCV: Fire Safety Evacuation Training & Emergency Guidance System
 
 A comprehensive fire safety training and emergency evacuation system combining 3D simulation, computer vision-based indoor localization, and real-time emergency guidance.
 
