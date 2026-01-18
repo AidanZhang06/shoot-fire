@@ -197,6 +197,7 @@
 <body>
   <h1>🎥 Overshoot Live Indoor Localization</h1>
   <p class="subtitle">Real-time metadata extraction from live video stream</p>
+  <p class="subtitle" id="deviceIdDisplay" style="color: #00ff88; font-family: monospace;">Device ID: Loading...</p>
 
   <video id="video" muted playsinline autoplay></video>
 
@@ -285,6 +286,13 @@
     let gpsUpdateCounter = 0;
     let lastGpsCoords = null;
     let currentGpsData = null;  // Store latest GPS data for combining with metadata
+
+    // Generate unique device ID (or get from localStorage)
+    let deviceId = localStorage.getItem('device_id');
+    if (!deviceId) {
+      deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('device_id', deviceId);
+    }
     let lastResultTime = null;  // Track when we last got a result
     let resultCheckInterval = null;  // Interval to check for stale results
 
@@ -381,46 +389,98 @@ REMEMBER: You are a SENSOR, not a localizer. Extract observations, not conclusio
         raw_response: text
       };
 
-      // Extract scene type
-      const sceneMatch = text.match(/Scene:\s*(\w+)/i);
-      if (sceneMatch) {
-        parsed.scene_type = sceneMatch[1].toLowerCase();
-      }
+      try {
+        // Extract scene type
+        const sceneMatch = text.match(/Scene:\s*(\w+)/i);
+        if (sceneMatch) {
+          parsed.scene_type = sceneMatch[1].toLowerCase();
+        }
 
-      // Extract text detections
-      const textMatch = text.match(/Text:\s*(.+?)(?=\n|Landmarks:|Lighting:|Motion:|$)/is);
-      if (textMatch) {
-        const textContent = textMatch[1];
-        // Split by common delimiters and clean up
-        const texts = textContent.split(/[,;\n]/).filter(t => t.trim());
-        parsed.text_detected = texts.map(t => ({ text: t.trim(), confidence: 0.8 }));
-      }
+        // Extract text detections - handle [] or actual text
+        const textMatch = text.match(/Text:\s*(.+?)(?=\nLandmarks:|Lighting:|Motion:|$)/is);
+        if (textMatch) {
+          const textContent = textMatch[1].trim();
+          // Skip if empty brackets or "none"
+          if (textContent !== '[]' && textContent.toLowerCase() !== 'none' && textContent.length > 0) {
+            // Remove brackets and split by comma
+            const cleanText = textContent.replace(/[\[\]]/g, '');
+            const texts = cleanText.split(',').map(t => t.trim()).filter(t => t.length > 0);
+            parsed.text_detected = texts.map(t => ({
+              text: t,
+              confidence: 0.8,
+              includes_arrow: /→|←|↑|↓|->|<-/.test(t)
+            }));
+          }
+        }
 
-      // Extract landmarks
-      const landmarksMatch = text.match(/Landmarks:\s*(.+?)(?=\n|Lighting:|Motion:|$)/is);
-      if (landmarksMatch) {
-        const landmarksContent = landmarksMatch[1];
-        const landmarks = landmarksContent.split(/[,;\n]/).filter(l => l.trim());
-        parsed.landmarks = landmarks.map(l => {
-          // Try to extract type, direction, distance from text like "door ahead near"
-          const parts = l.toLowerCase().split(/\s+/);
-          return {
-            type: parts[0] || 'unknown',
-            direction: parts.find(p => ['left', 'right', 'ahead', 'behind'].includes(p)) || 'ahead',
-            distance: parts.find(p => ['near', 'mid', 'far'].includes(p)) || 'mid',
-            confidence: 0.75
-          };
-        });
-      }
+        // Extract landmarks - handle format like "[door: left, near, exit_sign: ahead, far]"
+        const landmarksMatch = text.match(/Landmarks:\s*(.+?)(?=\nLighting:|Motion:|$)/is);
+        if (landmarksMatch) {
+          const landmarksContent = landmarksMatch[1].trim();
+          // Remove brackets
+          const cleanLandmarks = landmarksContent.replace(/[\[\]]/g, '').trim();
 
-      // Extract lighting
-      const lightingMatch = text.match(/Lighting:\s*(\w+)/i);
-      if (lightingMatch) {
-        parsed.lighting_quality = lightingMatch[1].toLowerCase();
-      }
+          if (cleanLandmarks.toLowerCase() !== 'none' && cleanLandmarks.length > 0) {
+            // Split by comma, then parse each landmark
+            const landmarkParts = cleanLandmarks.split(',').map(l => l.trim());
 
-      // Detect motion
-      parsed.motion_blur_detected = /motion.*blur|blur.*detected|unstable/i.test(text);
+            let currentLandmark = null;
+            for (const part of landmarkParts) {
+              // Check if this part has a colon (indicates a landmark type)
+              if (part.includes(':')) {
+                // Save previous landmark if exists
+                if (currentLandmark) {
+                  parsed.landmarks.push(currentLandmark);
+                }
+
+                // Start new landmark
+                const [type, firstAttr] = part.split(':').map(s => s.trim());
+                currentLandmark = {
+                  type: type.toLowerCase(),
+                  direction: 'ahead',
+                  distance: 'mid',
+                  confidence: 0.75
+                };
+
+                // Check if firstAttr is direction or distance
+                if (firstAttr) {
+                  if (['left', 'right', 'ahead', 'behind'].includes(firstAttr.toLowerCase())) {
+                    currentLandmark.direction = firstAttr.toLowerCase();
+                  } else if (['very_close', 'near', 'mid', 'far'].includes(firstAttr.toLowerCase())) {
+                    currentLandmark.distance = firstAttr.toLowerCase();
+                  }
+                }
+              } else if (currentLandmark) {
+                // This is an attribute of the current landmark
+                const attr = part.toLowerCase().trim();
+                if (['left', 'right', 'ahead', 'behind'].includes(attr)) {
+                  currentLandmark.direction = attr;
+                } else if (['very_close', 'near', 'mid', 'far'].includes(attr)) {
+                  currentLandmark.distance = attr;
+                }
+              }
+            }
+
+            // Don't forget the last landmark
+            if (currentLandmark) {
+              parsed.landmarks.push(currentLandmark);
+            }
+          }
+        }
+
+        // Extract lighting
+        const lightingMatch = text.match(/Lighting:\s*(\w+)/i);
+        if (lightingMatch) {
+          parsed.lighting_quality = lightingMatch[1].toLowerCase();
+        }
+
+        // Detect motion
+        parsed.motion_blur_detected = /motion.*blur|blur.*detected|unstable/i.test(text);
+
+      } catch (e) {
+        console.error('Error parsing Overshoot result:', e);
+        // Return whatever we managed to parse
+      }
 
       return parsed;
     }
@@ -626,6 +686,7 @@ REMEMBER: You are a SENSOR, not a localizer. Extract observations, not conclusio
       }
 
       const observation = {
+        device_id: deviceId,
         timestamp: new Date().toISOString(),
         gps_latitude: currentGpsData.latitude,
         gps_longitude: currentGpsData.longitude,
@@ -656,12 +717,12 @@ REMEMBER: You are a SENSOR, not a localizer. Extract observations, not conclusio
     // Clear observations when stream stops
     async function clearObservations() {
       try {
-        const response = await fetch('/clear_observations', {
+        const response = await fetch(`/clear_observations/${deviceId}`, {
           method: 'POST'
         });
 
         if (response.ok) {
-          console.log('🗑️ Observations cleared');
+          logDebug('🗑️ Observations cleared for this device', 'info');
         }
       } catch (error) {
         console.error('Error clearing observations:', error);
@@ -725,85 +786,136 @@ REMEMBER: You are a SENSOR, not a localizer. Extract observations, not conclusio
 
     startBtn.onclick = async function() {
       try {
-        logDebug('User clicked Start button', 'info');
+        logDebug('=== START BUTTON CLICKED ===', 'info');
         showStatus('Initializing camera and Overshoot vision...', 'info');
         startBtn.disabled = true;
 
-        logDebug('Checking if HTTPS...', 'info');
+        // Check HTTPS
+        logDebug('Protocol: ' + location.protocol, 'info');
         if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-          logDebug('WARNING: Not using HTTPS! GPS and camera may not work.', 'error');
+          logDebug('⚠️ WARNING: Not using HTTPS! This will fail on mobile.', 'error');
+        } else {
+          logDebug('✓ HTTPS confirmed', 'success');
         }
 
-        logDebug('Initializing Overshoot RealtimeVision...', 'info');
+        logDebug('Initializing Overshoot RealtimeVision - simple mode', 'info');
 
-        // Initialize Overshoot RealtimeVision
-        vision = new RealtimeVision({
-          apiUrl: API_URL,
-          apiKey: API_KEY,
-          prompt: INDOOR_PROMPT,
-          video: video,  // Pass our video element directly
-          source: {
-            type: 'camera',
-            cameraFacing: 'environment'  // Use back camera
-          },
-          // Processing parameters - optimized for mobile
-          clip_length_seconds: 1.5,     // Shorter clips for mobile
-          delay_seconds: 4.0,            // Get results every 4 seconds
-          fps: 15,                       // Lower fps for mobile (was 30)
-          sampling_ratio: 0.3,           // Sample 30% of frames
-          // Result callback
-          onResult: async (result) => {
-            lastResultTime = Date.now();  // Update last result timestamp
-            logDebug('✓ Received Overshoot result (#' + (resultCount + 1) + ')', 'success');
-            console.log('Overshoot result:', result);
-            const parsedData = parseOvershootResult(result);
-            displayMetadata(parsedData);
-            showStatus('✓ Stream active - receiving real-time metadata', 'success');
+        try {
+          // Initialize Overshoot RealtimeVision - simplest possible config
+          vision = new RealtimeVision({
+            apiUrl: API_URL,
+            apiKey: API_KEY,
+            prompt: INDOOR_PROMPT,
+            video: video,  // Pass video element
+            source: {
+              type: 'camera',
+              cameraFacing: 'environment'  // Use back camera
+            },
+            // Processing parameters - heavily optimized for mobile networks
+            clip_length_seconds: 1.0,     // Very short clips
+            delay_seconds: 6.0,            // Get results every 6 seconds (more time between)
+            fps: 10,                       // Lower fps for stability
+            sampling_ratio: 0.2,           // Sample only 20% of frames
+            // Result callback
+            onResult: async (result) => {
+              lastResultTime = Date.now();  // Update last result timestamp
+              resultCount++;
+              logDebug('🎉 RESULT RECEIVED! Result #' + resultCount, 'success');
+              console.log('🎉 Overshoot result:', result);
 
-            // Save observation (GPS + metadata) to backend
-            try {
-              await saveObservation(parsedData);
-            } catch (e) {
-              logDebug('Error saving observation: ' + e.message, 'error');
+              try {
+                const parsedData = parseOvershootResult(result);
+                logDebug('✓ Parsed result successfully', 'success');
+                displayMetadata(parsedData);
+                showStatus('✓ Stream active - receiving real-time metadata', 'success');
+
+                // Save observation (GPS + metadata) to backend
+                try {
+                  await saveObservation(parsedData);
+                  logDebug('✓ Observation saved', 'success');
+                } catch (e) {
+                  logDebug('Error saving observation: ' + e.message, 'error');
+                }
+              } catch (parseError) {
+                logDebug('Error processing result: ' + parseError.message, 'error');
+                console.error('Parse error:', parseError);
+              }
+            },
+            onError: (error) => {
+              const errorMsg = error.message || error.toString();
+              logDebug('Overshoot ERROR: ' + errorMsg, 'error');
+              console.error('Overshoot error:', error);
+
+              // Check if it's a critical error that requires restart
+              if (errorMsg.includes('stream_not_found') || errorMsg.includes('connection') || errorMsg.includes('keepalive')) {
+                logDebug('Connection lost - common on mobile. Stream may recover.', 'warn');
+                showStatus('⚠️ Connection issue - may recover automatically', 'warn');
+              } else {
+                showStatus(`Error: ${errorMsg}`, 'warn');
+              }
             }
-          },
-          onError: (error) => {
-            const errorMsg = error.message || error.toString();
-            logDebug('Overshoot ERROR: ' + errorMsg, 'error');
-            console.error('Overshoot error:', error);
+          });
 
-            // Check if it's a critical error that requires restart
-            if (errorMsg.includes('stream_not_found') || errorMsg.includes('connection') || errorMsg.includes('keepalive')) {
-              logDebug('Connection lost - this is common on mobile networks. Continue if stream resumes.', 'warn');
-              showStatus('⚠️ Connection issue - may recover automatically', 'warn');
-            } else {
-              showStatus(`Error: ${errorMsg} - Stream continuing...`, 'warn');
-            }
-            // Don't stop on error - Overshoot will retry automatically
+          logDebug('✓ RealtimeVision object created', 'success');
+        } catch (initError) {
+          logDebug('❌ Failed to create RealtimeVision: ' + initError.message, 'error');
+          throw initError;
+        }
+
+        // Start the vision stream with timeout
+        logDebug('Calling vision.start()... This may take 10-20 seconds.', 'info');
+        showStatus('Starting Overshoot vision stream... Please wait...', 'info');
+
+        try {
+          // Add 30-second timeout for vision.start()
+          const startPromise = vision.start();
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('vision.start() timed out after 30 seconds')), 30000)
+          );
+
+          await Promise.race([startPromise, timeoutPromise]);
+          logDebug('✓✓✓ Vision.start() completed successfully!', 'success');
+
+          // Check if video is actually playing
+          if (video.srcObject) {
+            logDebug('✓ Video stream is connected', 'success');
+          } else {
+            logDebug('⚠️ Warning: Video has no srcObject after start', 'warn');
           }
-        });
-
-        // Start the vision stream
-        logDebug('Calling vision.start()...', 'info');
-        await vision.start();
-        logDebug('✓ Vision started successfully - video should be displaying', 'success');
-
-        // Video element is already connected via the 'video' parameter above
-        // No need to call getVideoElement() - it doesn't exist!
+        } catch (startError) {
+          logDebug('❌ vision.start() failed: ' + startError.message, 'error');
+          if (startError.stack) {
+            logDebug('Stack: ' + startError.stack.substring(0, 200), 'error');
+          }
+          throw startError;
+        }
 
         stopBtn.disabled = false;
-        showStatus('🎥 Live stream started - analyzing every 4 seconds', 'success');
+        showStatus('🎥 Live stream started - waiting for first result...', 'success');
         logDebug('✓✓✓ SYSTEM FULLY STARTED ✓✓✓', 'success');
+        logDebug('Mobile optimization: Low bandwidth mode enabled', 'info');
+        logDebug('⏱️ Waiting for first Overshoot result (should arrive in ~6-10 seconds)...', 'info');
 
         // Start GPS tracking
         startGPSTracking();
 
         // Start monitoring for stale results
         lastResultTime = Date.now();
+        let firstResultReceived = false;
+
         resultCheckInterval = setInterval(() => {
           const timeSinceLastResult = (Date.now() - lastResultTime) / 1000;
-          if (timeSinceLastResult > 15) {  // If no result for 15 seconds
-            logDebug(`⚠️ No results for ${timeSinceLastResult.toFixed(0)} seconds - connection may have stalled`, 'warn');
+
+          if (!firstResultReceived && timeSinceLastResult > 15) {
+            logDebug(`⚠️ Still waiting for first result (${timeSinceLastResult.toFixed(0)}s elapsed)`, 'warn');
+            logDebug('This suggests Overshoot may not be processing frames on mobile', 'warn');
+          } else if (firstResultReceived && timeSinceLastResult > 20) {
+            logDebug(`⚠️ No results for ${timeSinceLastResult.toFixed(0)}s - connection may have stalled`, 'warn');
+          }
+
+          // Update flag when first result comes in
+          if (resultCount > 0) {
+            firstResultReceived = true;
           }
         }, 5000);  // Check every 5 seconds
 
@@ -831,8 +943,8 @@ REMEMBER: You are a SENSOR, not a localizer. Extract observations, not conclusio
         resultCheckInterval = null;
       }
 
-      // DON'T clear observations - keep the file!
-      // await clearObservations();
+      // Keep observations - don't clear them
+      // User can manually clear if needed via /clear_observations/{device_id}
 
       video.srcObject = null;
       startBtn.disabled = false;
@@ -848,6 +960,8 @@ REMEMBER: You are a SENSOR, not a localizer. Extract observations, not conclusio
 
     // Page load initialization
     logDebug('=== PAGE LOADED ===', 'info');
+    logDebug('Device ID: ' + deviceId, 'success');
+    document.getElementById('deviceIdDisplay').textContent = 'Device ID: ' + deviceId;
     logDebug('Protocol: ' + location.protocol, 'info');
     logDebug('Hostname: ' + location.hostname, 'info');
     logDebug('User Agent: ' + navigator.userAgent, 'info');

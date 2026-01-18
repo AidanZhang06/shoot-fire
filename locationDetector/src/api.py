@@ -6,6 +6,7 @@ Provides endpoints for smartphone apps to submit camera frames.
 from pathlib import Path
 import json
 from datetime import datetime
+import glob
 
 from fastapi import FastAPI, File, UploadFile, HTTPException, status, Body
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,12 +34,13 @@ logger = structlog.get_logger()
 # Global service instance
 extraction_service: Optional[MetadataExtractionService] = None
 
-# Observations file path
-OBSERVATIONS_FILE = Path(__file__).resolve().parent.parent / "observations.json"
+# Observations directory
+OBSERVATIONS_DIR = Path(__file__).resolve().parent.parent / "observations"
 
 
 class ObservationData(BaseModel):
     """Combined GPS + metadata observation."""
+    device_id: str  # Unique device identifier
     timestamp: str
     gps_latitude: float
     gps_longitude: float
@@ -57,17 +59,16 @@ async def lifespan(app: FastAPI):
     logger.info("starting_metadata_extraction_service")
     extraction_service = MetadataExtractionService(settings)
 
+    # Create observations directory if it doesn't exist
+    OBSERVATIONS_DIR.mkdir(exist_ok=True)
+    logger.info("observations_directory_ready", path=str(OBSERVATIONS_DIR))
+
     yield
 
     # Shutdown
     logger.info("shutting_down_metadata_extraction_service")
     if extraction_service:
         await extraction_service.close()
-
-    # Keep observations file - don't delete on shutdown
-    # if OBSERVATIONS_FILE.exists():
-    #     OBSERVATIONS_FILE.unlink()
-    #     logger.info("deleted_observations_file")
 
 
 # Initialize FastAPI app
@@ -92,6 +93,12 @@ app.add_middleware(
 async def overshoot_livestream_page():
     """Serve the Overshoot live video streaming page."""
     path = Path(__file__).resolve().parent.parent / "static" / "overshoot-livestream.html"
+    return FileResponse(path)
+
+@app.get("/dashboard")
+async def dashboard_page():
+    """Serve the multi-device tracking dashboard."""
+    path = Path(__file__).resolve().parent.parent / "static" / "dashboard.html"
     return FileResponse(path)
 
 @app.get("/test-simple")
@@ -264,27 +271,31 @@ async def get_schema():
 @app.post("/save_observation")
 async def save_observation(observation: ObservationData = Body(...)):
     """
-    Save a combined GPS + metadata observation to JSON file.
-    Appends to observations.json which is deleted when the server stops.
+    Save a combined GPS + metadata observation to device-specific JSON file.
+    Each device gets its own observations_<device_id>.json file.
     """
     try:
+        device_id = observation.device_id
+        device_file = OBSERVATIONS_DIR / f"observations_{device_id}.json"
+
         # Read existing observations or create new list
         observations = []
-        if OBSERVATIONS_FILE.exists():
-            with open(OBSERVATIONS_FILE, 'r') as f:
+        if device_file.exists():
+            with open(device_file, 'r') as f:
                 observations = json.load(f)
 
         # Append new observation
         observations.append(observation.model_dump())
 
         # Write back to file
-        with open(OBSERVATIONS_FILE, 'w') as f:
+        with open(device_file, 'w') as f:
             json.dump(observations, f, indent=2)
 
-        logger.info("observation_saved", count=len(observations))
+        logger.info("observation_saved", device_id=device_id, count=len(observations))
 
         return {
             "status": "success",
+            "device_id": device_id,
             "total_observations": len(observations)
         }
 
@@ -296,18 +307,19 @@ async def save_observation(observation: ObservationData = Body(...)):
         )
 
 
-@app.post("/clear_observations")
-async def clear_observations():
+@app.post("/clear_observations/{device_id}")
+async def clear_observations(device_id: str):
     """
-    Clear all observations (delete the JSON file).
+    Clear observations for a specific device.
     Called when user stops the stream.
     """
     try:
-        if OBSERVATIONS_FILE.exists():
-            OBSERVATIONS_FILE.unlink()
-            logger.info("observations_cleared")
+        device_file = OBSERVATIONS_DIR / f"observations_{device_id}.json"
+        if device_file.exists():
+            device_file.unlink()
+            logger.info("observations_cleared", device_id=device_id)
 
-        return {"status": "success", "message": "Observations cleared"}
+        return {"status": "success", "message": f"Observations cleared for device {device_id}"}
 
     except Exception as e:
         logger.error("failed_to_clear_observations", error=str(e))
@@ -317,25 +329,95 @@ async def clear_observations():
         )
 
 
-@app.get("/observations")
-async def get_observations():
+@app.get("/observations/{device_id}")
+async def get_observations(device_id: str):
     """
-    Get all saved observations.
+    Get all saved observations for a specific device.
     """
     try:
-        if not OBSERVATIONS_FILE.exists():
-            return {"observations": []}
+        device_file = OBSERVATIONS_DIR / f"observations_{device_id}.json"
+        if not device_file.exists():
+            return {"device_id": device_id, "observations": [], "count": 0}
 
-        with open(OBSERVATIONS_FILE, 'r') as f:
+        with open(device_file, 'r') as f:
             observations = json.load(f)
 
-        return {"observations": observations, "count": len(observations)}
+        return {"device_id": device_id, "observations": observations, "count": len(observations)}
 
     except Exception as e:
         logger.error("failed_to_get_observations", error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get observations: {str(e)}"
+        )
+
+
+@app.get("/devices")
+async def list_devices():
+    """
+    List all active devices (devices with observation files).
+    Returns device IDs and their latest GPS coordinates.
+    """
+    try:
+        devices = []
+        observation_files = glob.glob(str(OBSERVATIONS_DIR / "observations_*.json"))
+
+        for file_path in observation_files:
+            file = Path(file_path)
+            device_id = file.stem.replace("observations_", "")
+
+            with open(file, 'r') as f:
+                observations = json.load(f)
+
+            if observations:
+                latest = observations[-1]
+                devices.append({
+                    "device_id": device_id,
+                    "observation_count": len(observations),
+                    "latest_gps": {
+                        "latitude": latest.get("gps_latitude"),
+                        "longitude": latest.get("gps_longitude"),
+                        "accuracy": latest.get("gps_accuracy"),
+                        "timestamp": latest.get("timestamp")
+                    }
+                })
+
+        logger.info("devices_listed", count=len(devices))
+        return {"devices": devices, "count": len(devices)}
+
+    except Exception as e:
+        logger.error("failed_to_list_devices", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list devices: {str(e)}"
+        )
+
+
+@app.get("/all_observations")
+async def get_all_observations():
+    """
+    Get observations from all devices (for map visualization).
+    """
+    try:
+        all_data = {}
+        observation_files = glob.glob(str(OBSERVATIONS_DIR / "observations_*.json"))
+
+        for file_path in observation_files:
+            file = Path(file_path)
+            device_id = file.stem.replace("observations_", "")
+
+            with open(file, 'r') as f:
+                observations = json.load(f)
+
+            all_data[device_id] = observations
+
+        return {"devices": all_data, "device_count": len(all_data)}
+
+    except Exception as e:
+        logger.error("failed_to_get_all_observations", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get all observations: {str(e)}"
         )
 
 
