@@ -280,5 +280,118 @@
       "motion_blur_detected": false,
       "raw_response": "Scene: hallway\nText: []\nLandmarks: [door: right, near, elevator: right, near, exit_sign: right, far]\nLighting: good\nMotion: stable"
     }
+  },
+  {
+    "device_id": "device_1768749116008_fhasdev67",
+    "timestamp": "2026-01-18T15:40:50.586Z",
+    "gps_latitude": 40.44338013,
+    "gps_longitude": -79.94465971,
+    "gps_accuracy": 35,
+    "metadata": {
+      "scene_type": "unknown",
+      "text_detected": [],
+      "landmarks": [],
+      "lighting_quality": "good",
+      "motion_blur_detected": false,
+      "raw_response": "Scene: unknown  \nText: []  \nLandmarks: []  \nLighting: good  \nMotion: stable"
+    }
+  },
+  {
+    "device_id": "device_1768749116008_fhasdev67",
+    "timestamp": "2026-01-18T15:40:50.586Z",
+    "gps_latitude": 40.44338013,
+    "gps_longitude": -79.94465971,
+    "gps_accuracy": 35,
+    "metadata": {
+      "scene_type": "hallway",
+      "text_detected": [],
+      "landmarks": [
+        {
+          "type": "door",
+          "direction": "right",
+          "distance": "mid",
+          "confidence": 0.75
+        },
+        {
+          "type": "staircase",
+          "direction": "right",
+          "distance": "far",
+          "confidence": 0.75
+        },
+        {
+          "type": "exit_sign",
+          "direction": "right",
+          "distance": "far",
+          "confidence": 0.75
+        }
+      ],
+      "lighting_quality": "good",
+      "motion_blur_detected": false,
+      "raw_response": "Scene: hallway\nText: []\nLandmarks: [door: right, mid, staircase: right, far, exit_sign: right, far]\nLighting: good\nMotion: stable"
+    }
+  },
+  {
+    "device_id": "device_1768749116008_fhasdev67",
+    "timestamp": "2026-01-18T15:44:06.875Z",
+    "gps_latitude": 40.44334854,
+    "gps_longitude": -79.94468981,
+    "gps_accuracy": 35,
+    "metadata": {
+      "scene_type": "hallway",
+      "text_detected": [],
+      "landmarks": [
+        {
+          "type": "door",
+          "direction": "right",
+          "distance": "mid",
+          "confidence": 0.75
+        },
+        {
+          "type": "elevator",
+          "direction": "right",
+          "distance": "far",
+          "confidence": 0.75
+        },
+        {
+          "type": "exit_sign",
+          "direction": "right",
+          "distance": "far",
+          "confidence": 0.75
+        }
+      ],
+      "lighting_quality": "good",
+      "motion_blur_detected": false,
+      "raw_response": "Scene: hallway\nText: []\nLandmarks: [door: right, mid, elevator: right, far, exit_sign: right, far]\nLighting: good\nMotion: stable"
+    }
+  },
+  {
+    "device_id": "device_1768749116008_fhasdev67",
+    "timestamp": "2026-01-18T15:44:06.875Z",
+    "gps_latitude": 40.44334854,
+    "gps_longitude": -79.94468981,
+    "gps_accuracy": 35,
+    "metadata": {
+      "scene_type": "unknown",
+      "text_detected": [],
+      "landmarks": [],
+      "lighting_quality": "good",
+      "motion_blur_detected": false,
+      "raw_response": "Scene: unknown  \nText: []  \nLandmarks: []  \nLighting: good  \nMotion: stable"
+    }
+  },
+  {
+    "device_id": "device_1768749116008_fhasdev67",
+    "timestamp": "2026-01-18T15:44:11.002Z",
+    "gps_latitude": 40.44334854,
+    "gps_longitude": -79.94468981,
+    "gps_accuracy": 35,
+    "metadata": {
+      "scene_type": "unknown",
+      "text_detected": [],
+      "landmarks": [],
+      "lighting_quality": "good",
+      "motion_blur_detected": false,
+      "raw_response": "Scene: unknown  \nText: []  \nLandmarks: []  \nLighting: good  \nMotion: stable"
+    }
   }
 ]
