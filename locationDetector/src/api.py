@@ -4,13 +4,16 @@ Provides endpoints for smartphone apps to submit camera frames.
 """
 
 from pathlib import Path
+import json
+from datetime import datetime
 
-from fastapi import FastAPI, File, UploadFile, HTTPException, status
+from fastapi import FastAPI, File, UploadFile, HTTPException, status, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from contextlib import asynccontextmanager
 import structlog
 from typing import Optional
+from pydantic import BaseModel
 
 from src.config import get_settings
 from src.metadata_extractor import MetadataExtractionService
@@ -30,6 +33,18 @@ logger = structlog.get_logger()
 # Global service instance
 extraction_service: Optional[MetadataExtractionService] = None
 
+# Observations file path
+OBSERVATIONS_FILE = Path(__file__).resolve().parent.parent / "observations.json"
+
+
+class ObservationData(BaseModel):
+    """Combined GPS + metadata observation."""
+    timestamp: str
+    gps_latitude: float
+    gps_longitude: float
+    gps_accuracy: float
+    metadata: dict  # Overshoot metadata
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -48,6 +63,11 @@ async def lifespan(app: FastAPI):
     logger.info("shutting_down_metadata_extraction_service")
     if extraction_service:
         await extraction_service.close()
+
+    # Keep observations file - don't delete on shutdown
+    # if OBSERVATIONS_FILE.exists():
+    #     OBSERVATIONS_FILE.unlink()
+    #     logger.info("deleted_observations_file")
 
 
 # Initialize FastAPI app
@@ -239,6 +259,84 @@ async def get_schema():
     Useful for client applications to understand the expected response format.
     """
     return IndoorMetadata.model_json_schema()
+
+
+@app.post("/save_observation")
+async def save_observation(observation: ObservationData = Body(...)):
+    """
+    Save a combined GPS + metadata observation to JSON file.
+    Appends to observations.json which is deleted when the server stops.
+    """
+    try:
+        # Read existing observations or create new list
+        observations = []
+        if OBSERVATIONS_FILE.exists():
+            with open(OBSERVATIONS_FILE, 'r') as f:
+                observations = json.load(f)
+
+        # Append new observation
+        observations.append(observation.model_dump())
+
+        # Write back to file
+        with open(OBSERVATIONS_FILE, 'w') as f:
+            json.dump(observations, f, indent=2)
+
+        logger.info("observation_saved", count=len(observations))
+
+        return {
+            "status": "success",
+            "total_observations": len(observations)
+        }
+
+    except Exception as e:
+        logger.error("failed_to_save_observation", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to save observation: {str(e)}"
+        )
+
+
+@app.post("/clear_observations")
+async def clear_observations():
+    """
+    Clear all observations (delete the JSON file).
+    Called when user stops the stream.
+    """
+    try:
+        if OBSERVATIONS_FILE.exists():
+            OBSERVATIONS_FILE.unlink()
+            logger.info("observations_cleared")
+
+        return {"status": "success", "message": "Observations cleared"}
+
+    except Exception as e:
+        logger.error("failed_to_clear_observations", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to clear observations: {str(e)}"
+        )
+
+
+@app.get("/observations")
+async def get_observations():
+    """
+    Get all saved observations.
+    """
+    try:
+        if not OBSERVATIONS_FILE.exists():
+            return {"observations": []}
+
+        with open(OBSERVATIONS_FILE, 'r') as f:
+            observations = json.load(f)
+
+        return {"observations": observations, "count": len(observations)}
+
+    except Exception as e:
+        logger.error("failed_to_get_observations", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get observations: {str(e)}"
+        )
 
 
 @app.exception_handler(Exception)
