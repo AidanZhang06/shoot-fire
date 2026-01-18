@@ -214,10 +214,10 @@ export function ScenarioPanel({
       boxShadow: '-4px 0 20px rgba(0, 0, 0, 0.5)'
     }}>
       {/* Header */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         marginBottom: '24px',
         borderBottom: '3px solid #ff6b35',
         paddingBottom: '16px',
@@ -228,9 +228,9 @@ export function ScenarioPanel({
         marginTop: '-24px',
         borderRadius: '0 0 8px 8px'
       }}>
-        <h1 style={{ 
-          margin: 0, 
-          fontSize: '24px', 
+        <h1 style={{
+          margin: 0,
+          fontSize: '24px',
           color: '#ff6b35',
           fontWeight: 700,
           textShadow: '0 2px 4px rgba(255, 107, 53, 0.3)',
@@ -238,33 +238,60 @@ export function ScenarioPanel({
         }}>
           Fire Escape Educator
         </h1>
-        <button
-          onClick={() => onToggleFirstPerson?.(!firstPersonMode)}
-          style={{
-            padding: '8px 12px',
-            background: firstPersonMode ? 'linear-gradient(135deg, #ff6b35 0%, #ff8a50 100%)' : '#333',
-            color: '#fff',
-            border: `1px solid ${firstPersonMode ? '#ff6b35' : '#555'}`,
-            borderRadius: '6px',
-            cursor: 'pointer',
-            fontSize: '12px',
-            fontWeight: 600,
-            transition: 'all 0.2s ease',
-            boxShadow: firstPersonMode ? '0 2px 8px rgba(255, 107, 53, 0.3)' : 'none'
-          }}
-          onMouseOver={(e) => {
-            if (!firstPersonMode) {
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => onToggleFirstPerson?.(!firstPersonMode)}
+            style={{
+              padding: '8px 12px',
+              background: firstPersonMode ? 'linear-gradient(135deg, #ff6b35 0%, #ff8a50 100%)' : '#333',
+              color: '#fff',
+              border: `1px solid ${firstPersonMode ? '#ff6b35' : '#555'}`,
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: 600,
+              transition: 'all 0.2s ease',
+              boxShadow: firstPersonMode ? '0 2px 8px rgba(255, 107, 53, 0.3)' : 'none'
+            }}
+            onMouseOver={(e) => {
+              if (!firstPersonMode) {
+                e.currentTarget.style.background = '#444';
+              }
+            }}
+            onMouseOut={(e) => {
+              if (!firstPersonMode) {
+                e.currentTarget.style.background = '#333';
+              }
+            }}
+          >
+            {firstPersonMode ? '👁️ 1st Person' : '🎥 3rd Person'}
+          </button>
+          <button
+            onClick={() => {
+              // Placeholder for switching to live video feed
+              console.log('Switching to live video feed...');
+            }}
+            style={{
+              padding: '8px 12px',
+              background: '#333',
+              color: '#fff',
+              border: '1px solid #555',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: 600,
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={(e) => {
               e.currentTarget.style.background = '#444';
-            }
-          }}
-          onMouseOut={(e) => {
-            if (!firstPersonMode) {
+            }}
+            onMouseOut={(e) => {
               e.currentTarget.style.background = '#333';
-            }
-          }}
-        >
-          {firstPersonMode ? '👁️ 1st Person' : '🎥 3rd Person'}
-        </button>
+            }}
+          >
+            📹 Live Feed
+          </button>
+        </div>
       </div>
 
       {/* Scenario Selection */}
