@@ -100,7 +100,7 @@ export function HillmanBuilding({ playerPosition = [0, 0, 0], renderDistance = 3
           <group key={floorIndex} position={[0, floorIndex * floorHeight, 0]}>
             {/* Floor label */}
             <Text
-              position={[0, floorHeight + 1, floor.buildingDepth / 2 + 3]}
+              position={[0, floorHeight - 2, floor.buildingDepth / 2 + 3]}
               fontSize={0.8}
               color="#00ffff"
               anchorX="center"
