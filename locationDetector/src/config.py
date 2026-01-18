@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     # Overshoot API Configuration
     overshoot_api_key: str
     overshoot_api_url: str = "https://cluster1.overshoot.ai/api/v0.2"
-    overshoot_timeout: int = 30  # seconds
+    overshoot_timeout: int = 60  # seconds (increased for mobile)
 
     # API Server Configuration
     api_host: str = "0.0.0.0"

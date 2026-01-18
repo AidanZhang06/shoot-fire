@@ -209,6 +209,14 @@
     <span id="statusText">Initializing...</span>
   </div>
 
+  <!-- Error Log Display for Debugging -->
+  <div style="background: #2a2a3e; padding: 16px; border-radius: 12px; margin-top: 16px;">
+    <h2 style="color: #ff4757; font-size: 1.1rem; margin: 0 0 12px 0;">🐛 Debug Log</h2>
+    <div id="errorLog" style="font-family: monospace; font-size: 0.8rem; max-height: 200px; overflow-y: auto; background: #1a1a2e; padding: 12px; border-radius: 8px;">
+      <div style="color: #888;">Logs will appear here...</div>
+    </div>
+  </div>
+
   <!-- GPS Location Display -->
   <div class="gps-display">
     <h2>📍 GPS Coordinates</h2>
@@ -269,6 +277,7 @@
     const gpsTime = document.getElementById('gpsTime');
     const gpsUpdateCount = document.getElementById('gpsUpdateCount');
     const forceGpsBtn = document.getElementById('forceGpsBtn');
+    const errorLog = document.getElementById('errorLog');
 
     let vision = null;
     let resultCount = 0;
@@ -276,6 +285,30 @@
     let gpsUpdateCounter = 0;
     let lastGpsCoords = null;
     let currentGpsData = null;  // Store latest GPS data for combining with metadata
+    let lastResultTime = null;  // Track when we last got a result
+    let resultCheckInterval = null;  // Interval to check for stale results
+
+    // Debug logging function
+    function logDebug(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const colors = {
+        info: '#00d4ff',
+        success: '#00ff88',
+        error: '#ff4757',
+        warn: '#ffd700'
+      };
+      const color = colors[type] || colors.info;
+
+      const logEntry = document.createElement('div');
+      logEntry.style.color = color;
+      logEntry.style.marginBottom = '4px';
+      logEntry.textContent = `[${timestamp}] ${message}`;
+
+      errorLog.appendChild(logEntry);
+      errorLog.scrollTop = errorLog.scrollHeight;
+
+      console.log(`[${type.toUpperCase()}] ${message}`);
+    }
 
     // Configuration - Load from your .env
     const API_KEY = 'ovs_4488f728fc52c4d2ca6f8972c7cc53e3';
@@ -454,16 +487,17 @@ REMEMBER: You are a SENSOR, not a localizer. Extract observations, not conclusio
 
     // GPS Tracking Functions
     function startGPSTracking() {
-      console.log('🌍 Starting GPS tracking...');
+      logDebug('Starting GPS tracking...', 'info');
       gpsUpdateCounter = 0;
       lastGpsCoords = null;
 
       if (!navigator.geolocation) {
-        console.error('Geolocation is not supported by this browser');
+        logDebug('ERROR: Geolocation not supported by browser', 'error');
         gpsCoords.textContent = 'Not supported by browser';
         return;
       }
 
+      logDebug('Geolocation API available', 'success');
       gpsCoords.textContent = 'Requesting permission...';
 
       // AGGRESSIVE GPS tracking options - force fresh readings
@@ -539,23 +573,25 @@ REMEMBER: You are a SENSOR, not a localizer. Extract observations, not conclusio
         },
         // Error callback
         (error) => {
-          console.error('🌍 GPS error:', error);
           let errorMsg = '';
           switch(error.code) {
             case error.PERMISSION_DENIED:
-              errorMsg = 'Permission denied - please allow location access';
+              errorMsg = 'GPS Permission denied - please allow location access';
+              logDebug(errorMsg, 'error');
               break;
             case error.POSITION_UNAVAILABLE:
-              errorMsg = 'Position unavailable';
+              errorMsg = 'GPS Position unavailable';
+              logDebug(errorMsg, 'error');
               break;
             case error.TIMEOUT:
-              errorMsg = 'Timeout - retrying...';
+              errorMsg = 'GPS Timeout - retrying...';
+              logDebug(errorMsg, 'warn');
               break;
             default:
-              errorMsg = 'Unknown error';
+              errorMsg = 'GPS Unknown error: ' + error.message;
+              logDebug(errorMsg, 'error');
           }
           gpsCoords.textContent = errorMsg;
-          console.error('GPS error details:', errorMsg);
         },
         gpsOptions
       );
@@ -689,55 +725,91 @@ REMEMBER: You are a SENSOR, not a localizer. Extract observations, not conclusio
 
     startBtn.onclick = async function() {
       try {
+        logDebug('User clicked Start button', 'info');
         showStatus('Initializing camera and Overshoot vision...', 'info');
         startBtn.disabled = true;
+
+        logDebug('Checking if HTTPS...', 'info');
+        if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+          logDebug('WARNING: Not using HTTPS! GPS and camera may not work.', 'error');
+        }
+
+        logDebug('Initializing Overshoot RealtimeVision...', 'info');
 
         // Initialize Overshoot RealtimeVision
         vision = new RealtimeVision({
           apiUrl: API_URL,
           apiKey: API_KEY,
           prompt: INDOOR_PROMPT,
+          video: video,  // Pass our video element directly
           source: {
             type: 'camera',
             cameraFacing: 'environment'  // Use back camera
           },
-          // Processing parameters
-          clip_length_seconds: 2.0,     // Analyze 2-second clips
-          delay_seconds: 3.0,            // Get results every 3 seconds
-          fps: 30,                       // Capture at 30fps
-          sampling_ratio: 0.2,           // Send 20% of frames (6 fps effective)
+          // Processing parameters - optimized for mobile
+          clip_length_seconds: 1.5,     // Shorter clips for mobile
+          delay_seconds: 4.0,            // Get results every 4 seconds
+          fps: 15,                       // Lower fps for mobile (was 30)
+          sampling_ratio: 0.3,           // Sample 30% of frames
           // Result callback
           onResult: async (result) => {
+            lastResultTime = Date.now();  // Update last result timestamp
+            logDebug('✓ Received Overshoot result (#' + (resultCount + 1) + ')', 'success');
             console.log('Overshoot result:', result);
             const parsedData = parseOvershootResult(result);
             displayMetadata(parsedData);
             showStatus('✓ Stream active - receiving real-time metadata', 'success');
 
             // Save observation (GPS + metadata) to backend
-            await saveObservation(parsedData);
+            try {
+              await saveObservation(parsedData);
+            } catch (e) {
+              logDebug('Error saving observation: ' + e.message, 'error');
+            }
           },
           onError: (error) => {
+            const errorMsg = error.message || error.toString();
+            logDebug('Overshoot ERROR: ' + errorMsg, 'error');
             console.error('Overshoot error:', error);
-            showStatus(`Error: ${error.message}`, 'error');
+
+            // Check if it's a critical error that requires restart
+            if (errorMsg.includes('stream_not_found') || errorMsg.includes('connection') || errorMsg.includes('keepalive')) {
+              logDebug('Connection lost - this is common on mobile networks. Continue if stream resumes.', 'warn');
+              showStatus('⚠️ Connection issue - may recover automatically', 'warn');
+            } else {
+              showStatus(`Error: ${errorMsg} - Stream continuing...`, 'warn');
+            }
+            // Don't stop on error - Overshoot will retry automatically
           }
         });
 
         // Start the vision stream
+        logDebug('Calling vision.start()...', 'info');
         await vision.start();
+        logDebug('✓ Vision started successfully - video should be displaying', 'success');
 
-        // Get the video element from Overshoot and display it
-        const videoStream = vision.getVideoElement();
-        if (videoStream) {
-          video.srcObject = videoStream.srcObject;
-        }
+        // Video element is already connected via the 'video' parameter above
+        // No need to call getVideoElement() - it doesn't exist!
 
         stopBtn.disabled = false;
-        showStatus('🎥 Live stream started - analyzing every 3 seconds', 'success');
+        showStatus('🎥 Live stream started - analyzing every 4 seconds', 'success');
+        logDebug('✓✓✓ SYSTEM FULLY STARTED ✓✓✓', 'success');
 
         // Start GPS tracking
         startGPSTracking();
 
+        // Start monitoring for stale results
+        lastResultTime = Date.now();
+        resultCheckInterval = setInterval(() => {
+          const timeSinceLastResult = (Date.now() - lastResultTime) / 1000;
+          if (timeSinceLastResult > 15) {  // If no result for 15 seconds
+            logDebug(`⚠️ No results for ${timeSinceLastResult.toFixed(0)} seconds - connection may have stalled`, 'warn');
+          }
+        }, 5000);  // Check every 5 seconds
+
       } catch (error) {
+        logDebug('CRITICAL ERROR starting stream: ' + error.message, 'error');
+        logDebug('Error stack: ' + error.stack, 'error');
         console.error('Failed to start:', error);
         showStatus(`Failed to start: ${error.message}`, 'error');
         startBtn.disabled = false;
@@ -753,6 +825,12 @@ REMEMBER: You are a SENSOR, not a localizer. Extract observations, not conclusio
       // Stop GPS tracking
       stopGPSTracking();
 
+      // Stop result monitoring
+      if (resultCheckInterval) {
+        clearInterval(resultCheckInterval);
+        resultCheckInterval = null;
+      }
+
       // DON'T clear observations - keep the file!
       // await clearObservations();
 
@@ -760,14 +838,27 @@ REMEMBER: You are a SENSOR, not a localizer. Extract observations, not conclusio
       startBtn.disabled = false;
       stopBtn.disabled = true;
       resultCount = 0;
+      lastResultTime = null;
 
       hideStatus();
       metadataDisplay.innerHTML = '<p style="color: #888;">Stream stopped. observations.json saved in project folder.</p>';
       timestampEl.textContent = '—';
+      logDebug('Stream stopped by user', 'info');
     };
 
+    // Page load initialization
+    logDebug('=== PAGE LOADED ===', 'info');
+    logDebug('Protocol: ' + location.protocol, 'info');
+    logDebug('Hostname: ' + location.hostname, 'info');
+    logDebug('User Agent: ' + navigator.userAgent, 'info');
+
+    // Check HTTPS requirement
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+      logDebug('⚠️⚠️⚠️ NOT USING HTTPS! Camera and GPS may not work on mobile! ⚠️⚠️⚠️', 'error');
+    }
+
     // Start GPS tracking immediately on page load for testing
-    console.log('Page loaded, starting GPS tracking...');
+    logDebug('Starting GPS tracking on page load...', 'info');
     startGPSTracking();
   </script>
 </body>
