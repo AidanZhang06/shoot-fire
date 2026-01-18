@@ -298,7 +298,7 @@ export function ScenarioPanel({
               e.currentTarget.style.background = '#333';
             }}
           >
-            <a href="http://localhost:3000" target="_blank">📹 Live Feed</a>
+            <a href="http://localhost:3000" target="_blank" style={{ color: '#fff', textDecoration: 'none' }}>📹 Live Feed</a>
           </button>
         </div>
       </div>
