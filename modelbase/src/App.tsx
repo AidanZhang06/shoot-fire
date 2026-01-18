@@ -13,6 +13,7 @@ import { Stairs } from './components/Stairs';
 import { CoordinateSystem } from './components/CoordinateSystem';
 import { ExitDoor } from './components/ExitDoor';
 import { ExitPathMarkers } from './components/ExitPathMarkers';
+import { FireExitSign } from './components/FireExitSign';
 import { ScenarioEngine } from './scenario/ScenarioEngine';
 import { NavigationGraphImpl } from './navigation/NavigationGraph';
 import { GraphBuilder } from './navigation/GraphBuilder';
@@ -34,9 +35,29 @@ const POSITIONS = {
   westStairs: [-18, 21, 0] as [number, number, number],    // West stairwell
   southWing: [-15, 21, 12] as [number, number, number],    // South wing
   mainHallway: [0, 21, 0] as [number, number, number],     // Main hallway
-  stairwell: [-18, 14, 0] as [number, number, number],     // Descending stairs (floor 4)
-  groundFloor: [-18, 3.5, 0] as [number, number, number],  // Ground level
-  exit: [-22, 0, 0] as [number, number, number],           // Outside
+
+  // Exit sign locations on floor 6
+  westExitSign: [-12, 21, 0] as [number, number, number],  // West exit sign
+  eastExitSign: [12, 21, 0] as [number, number, number],   // East exit sign
+  southExitSign: [-15, 21, 8] as [number, number, number], // South exit sign
+
+  // Multi-step stair descent with waypoints
+  floor6_westStairs: [-18, 21, 0] as [number, number, number],    // Floor 6 west stairs
+  floor5_landing: [-18, 17.5, 3] as [number, number, number],     // Floor 5 landing - walk out a bit
+  floor5_westStairs: [-18, 17.5, 0] as [number, number, number],  // Floor 5 west stairs
+  floor4_landing: [-18, 14, 3] as [number, number, number],       // Floor 4 landing - walk out a bit
+  floor4_westStairs: [-18, 14, 0] as [number, number, number],    // Floor 4 west stairs
+  floor3_landing: [-18, 10.5, 3] as [number, number, number],     // Floor 3 landing
+  floor3_westStairs: [-18, 10.5, 0] as [number, number, number],  // Floor 3 west stairs
+  floor2_landing: [-18, 7, 3] as [number, number, number],        // Floor 2 landing
+  floor2_westStairs: [-18, 7, 0] as [number, number, number],     // Floor 2 west stairs
+  floor1_landing: [-18, 3.5, 3] as [number, number, number],      // Floor 1 landing
+  groundFloor: [-18, 0.5, 3] as [number, number, number],         // Ground level - outside stairs
+
+  // Final exits
+  westExit: [-22.5, 0, 0] as [number, number, number],     // West exit door
+  eastExit: [22.5, 0, 0] as [number, number, number],      // East exit door
+  southExit: [-15, 0, 17] as [number, number, number],     // South exit door
 };
 
 function App() {
@@ -53,6 +74,7 @@ function App() {
   const [cameraRotation, setCameraRotation] = useState(0);
   const [showQuadrantFires, setShowQuadrantFires] = useState(true); // Toggle for quadrant fires
   const [quadrantFireFloor, setQuadrantFireFloor] = useState(5); // Floor to show quadrant fires on
+  const [movementQueue, setMovementQueue] = useState<[number, number, number][]>([]); // Queue of positions to move through
 
   // Initialize navigation graph
   useEffect(() => {
@@ -124,7 +146,8 @@ function App() {
   // Move character based on scenario decision
   const handleDecision = useCallback((choiceId: string) => {
     let newTarget: [number, number, number] | undefined;
-    
+    let waypoints: [number, number, number][] = [];
+
     // Map choices to positions based on scenario flow
     switch (choiceId) {
       // Step 0 choices
@@ -133,46 +156,74 @@ function App() {
         newTarget = playerPosition;
         break;
       case 'east':
-        // Move toward east (dangerous - toward fire)
-        newTarget = POSITIONS.eastCorridor;
+        // Move toward east exit sign first, then corridor
+        newTarget = POSITIONS.eastExitSign;
+        waypoints = [POSITIONS.eastCorridor];
         break;
       case 'west':
-        // Move toward west stairs (safe)
-        newTarget = POSITIONS.westStairs;
+        // Move toward west exit sign first, then stairs
+        newTarget = POSITIONS.westExitSign;
+        waypoints = [POSITIONS.westStairs];
         break;
-        
+
       // Step 1 choices
       case 'west-stairs':
-        newTarget = POSITIONS.westStairs;
+        newTarget = POSITIONS.westExitSign;
+        waypoints = [POSITIONS.floor6_westStairs];
         break;
       case 'south':
-        newTarget = POSITIONS.southWing;
+        newTarget = POSITIONS.southExitSign;
+        waypoints = [POSITIONS.southWing];
         break;
       case 'elevator':
         // Stay where you are (elevator doesn't work)
         newTarget = playerPosition;
         break;
-        
-      // Step 2 choices
+
+      // Step 2 choices - descend with waypoints
       case 'descend':
-        newTarget = POSITIONS.stairwell;
+        // Create full descent path with landings
+        newTarget = POSITIONS.floor6_westStairs;
+        waypoints = [
+          POSITIONS.floor5_landing,
+          POSITIONS.floor5_westStairs,
+          POSITIONS.floor4_landing,
+          POSITIONS.floor4_westStairs,
+          POSITIONS.floor3_landing,
+          POSITIONS.floor3_westStairs,
+          POSITIONS.floor2_landing,
+          POSITIONS.floor2_westStairs,
+          POSITIONS.floor1_landing,
+          POSITIONS.groundFloor
+        ];
         break;
       case 'check-floor':
         // Move a bit then come back
         newTarget = POSITIONS.mainHallway;
         break;
-        
-      // Step 3 choices
+
+      // Step 3 choices - move to ground floor exit
       case 'exit':
+        newTarget = POSITIONS.groundFloor;
+        waypoints = [POSITIONS.westExit];
+        // Mark scenario as complete
+        if (scenarioState) {
+          setScenarioState({
+            ...scenarioState,
+            status: 'success'
+          });
+        }
+        break;
       case 'wait':
         newTarget = POSITIONS.groundFloor;
+        if (scenarioState) {
+          setScenarioState({
+            ...scenarioState,
+            status: 'success'
+          });
+        }
         break;
-        
-      // Final - reached exit
-      case 'reached-exit':
-        newTarget = POSITIONS.exit;
-        break;
-        
+
       default:
         // Move forward a bit
         newTarget = [
@@ -181,20 +232,37 @@ function App() {
           playerPosition[2]
         ];
     }
-    
+
     if (newTarget) {
       setTargetPosition(newTarget);
+      setMovementQueue(waypoints);
     }
-    
+
     setCurrentStep(prev => prev + 1);
-  }, [playerPosition]);
+  }, [playerPosition, scenarioState]);
 
   const handlePositionUpdate = useCallback((newPosition: [number, number, number]) => {
     setPlayerPosition(newPosition);
     if (scenarioEngine) {
       scenarioEngine.updatePlayerPosition(newPosition);
     }
-  }, [scenarioEngine]);
+
+    // Check if we've reached the current target and have more waypoints in queue
+    if (targetPosition && movementQueue.length > 0) {
+      const distance = Math.sqrt(
+        Math.pow(newPosition[0] - targetPosition[0], 2) +
+        Math.pow(newPosition[1] - targetPosition[1], 2) +
+        Math.pow(newPosition[2] - targetPosition[2], 2)
+      );
+
+      // If close to target (within 1 unit), move to next waypoint
+      if (distance < 1) {
+        const nextWaypoint = movementQueue[0];
+        setMovementQueue(prev => prev.slice(1));
+        setTargetPosition(nextWaypoint);
+      }
+    }
+  }, [scenarioEngine, targetPosition, movementQueue]);
 
   const handleScenarioParsed = useCallback((parsed: ParsedScenario) => {
     setParsedScenario(parsed);
@@ -241,7 +309,19 @@ function App() {
     setScenarioState(null);
     setScenarioEngine(null);
     setParsedScenario(null);
+    setMovementQueue([]);
   }, []);
+
+  // Auto-walk to exit when escaped
+  useEffect(() => {
+    if (scenarioState?.status === 'escaped' || scenarioState?.status === 'success') {
+      // Check if player is on ground floor (y < 2)
+      if (playerPosition[1] < 2 && movementQueue.length === 0) {
+        // Walk to nearest exit
+        setTargetPosition(POSITIONS.westExit);
+      }
+    }
+  }, [scenarioState, playerPosition, movementQueue]);
 
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh' }}>
@@ -342,6 +422,22 @@ function App() {
 
           {/* Exit Path Markers - Floor indicators showing the way to exits */}
           <ExitPathMarkers floor={6} />
+
+          {/* Fire Exit Signs - positioned around floor 6 */}
+          <FireExitSign position={[-12, 23, 0]} direction="left" />
+          <FireExitSign position={[12, 23, 0]} direction="right" />
+          <FireExitSign position={[-15, 23, 8]} direction="straight" />
+
+          {/* Fire Exit Signs - on stairwell landings */}
+          <FireExitSign position={[-18, 19, 2]} direction="down" label="EXIT ↓" />
+          <FireExitSign position={[-18, 15.5, 2]} direction="down" label="EXIT ↓" />
+          <FireExitSign position={[-18, 12, 2]} direction="down" label="EXIT ↓" />
+          <FireExitSign position={[-18, 8.5, 2]} direction="down" label="EXIT ↓" />
+          <FireExitSign position={[-18, 5, 2]} direction="down" label="EXIT ↓" />
+
+          {/* Fire Exit Signs - at ground level near exits */}
+          <FireExitSign position={[-20, 2, 0]} direction="left" label="EXIT →" />
+          <FireExitSign position={[20, 2, 0]} direction="right" label="EXIT ←" />
 
           {/* Exit Markers - Always visible */}
           <ExitMarkers
