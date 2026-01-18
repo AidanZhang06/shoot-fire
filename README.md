@@ -4,8 +4,6 @@
 
 A comprehensive fire safety training and emergency evacuation system combining 3D simulation, computer vision-based indoor localization, and real-time emergency guidance.
 
-![FireCV 3D Building Model](assets/screenshot.png)
-
 ## 🌟 Overview
 
 Shoot-Fire is an integrated platform for fire safety education and emergency response, consisting of three main components:
