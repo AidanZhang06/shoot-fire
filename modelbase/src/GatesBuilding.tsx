@@ -68,7 +68,67 @@ export function GatesBuilding({ playerPosition = [0, 0, 0], renderDistance = 30 
       ];
 
       // Room distribution based on floor type
-      if (floorNum >= 3 && floorNum <= 5) {
+      if (floorNum === 1) {
+        // GROUND FLOOR - Lobby and public spaces
+        rooms.push({
+          x: 0,
+          z: 0,
+          width: 22,
+          depth: 14,
+          label: 'Main Lobby\n& Reception',
+          type: 'lobby'
+        });
+        rooms.push({
+          x: mainWingWidth * 0.3,
+          z: 0,
+          width: 8,
+          depth: 8,
+          label: 'Security\nDesk',
+          type: 'security'
+        });
+        rooms.push({
+          x: -mainWingWidth * 0.3,
+          z: 0,
+          width: 8,
+          depth: 8,
+          label: 'Mailroom\n& Package Center',
+          type: 'admin'
+        });
+        rooms.push({
+          x: -mainWingWidth / 2 + sideWingWidth / 2,
+          z: sideWingDepth * 0.3,
+          width: sideWingWidth - 2,
+          depth: sideWingDepth * 0.4,
+          label: 'Exhibition\nHall',
+          type: 'lounge'
+        });
+      } else if (floorNum === 2) {
+        // FLOOR 2 - Infrastructure and services
+        rooms.push({
+          x: mainWingWidth * 0.25,
+          z: 0,
+          width: 12,
+          depth: 10,
+          label: 'Server Room\nIT Infrastructure',
+          type: 'server'
+        });
+        rooms.push({
+          x: -mainWingWidth * 0.25,
+          z: 0,
+          width: 10,
+          depth: 10,
+          label: 'Mechanical\nRoom',
+          type: 'mechanical'
+        });
+        rooms.push({
+          x: -mainWingWidth / 2 + sideWingWidth / 2,
+          z: sideWingDepth * 0.35,
+          width: sideWingWidth - 2,
+          depth: sideWingDepth * 0.5,
+          label: 'Loading Dock\n& Facilities',
+          type: 'storage'
+        });
+      } else if (floorNum >= 3 && floorNum <= 5) {
         // PUBLIC floors - large spaces
         if (floorNum === 3) {
           // Lecture halls in main wing
@@ -100,18 +160,10 @@ export function GatesBuilding({ playerPosition = [0, 0, 0], renderDistance = 30 
           });
           rooms.push({
             x: mainWingWidth * 0.25,
-            z: 6,
+            z: 0,
             width: 10,
             depth: 10,
             label: '4100\nClassroom',
-            type: 'classroom'
-          });
-          rooms.push({
-            x: mainWingWidth * 0.25,
-            z: -6,
-            width: 10,
-            depth: 10,
-            label: '4101\nClassroom',
             type: 'classroom'
           });
         } else if (floorNum === 5) {
@@ -133,26 +185,6 @@ export function GatesBuilding({ playerPosition = [0, 0, 0], renderDistance = 30 
             width: 16,
             depth: 14,
             label: 'Student Lounge\n& Common Area',
-            type: 'lounge'
-          });
-
-          // Collaboration space
-          rooms.push({
-            x: 0,
-            z: 0,
-            width: 12,
-            depth: 12,
-            label: 'Collaboration\nHub',
-            type: 'lounge'
-          });
-
-          // Side wing - large meeting/event space
-          rooms.push({
-            x: -mainWingWidth / 2 + sideWingWidth / 2,
-            z: sideWingDepth * 0.25,
-            width: sideWingWidth - 2,
-            depth: sideWingDepth * 0.4,
-            label: 'Event Space\n& Gallery',
             type: 'lounge'
           });
 
@@ -575,6 +607,13 @@ export function GatesBuilding({ playerPosition = [0, 0, 0], renderDistance = 30 
           </group>
         );
       })}
+
+      {/* ROOF - Transparent */}
+      <group position={[0, 9 * floorHeight, 0]}>
+        <Box args={[45, 0.2, 18]} position={[0, 0, 0]}>
+          <meshBasicMaterial color="#2a3a4a" transparent opacity={0.1} />
+        </Box>
+      </group>
     </group>
   );
 }
