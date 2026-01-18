@@ -1,6 +1,8 @@
-#FireCV: Fire Safety Evacuation Training & Emergency Guidance System
+# FireCV: Fire Safety Evacuation Training & Emergency Guidance System
 
 A comprehensive fire safety training and emergency evacuation system combining 3D simulation, computer vision-based indoor localization, and real-time emergency guidance.
+
+![FireCV 3D Building Model](assets/screenshot.png)
 
 ## 🌟 Overview
 
@@ -32,8 +34,7 @@ shoot-fire/
 │   │   ├── navigation/     # Pathfinding and navigation graph
 │   │   ├── scenario/       # Scenario engine and state management
 │   │   └── evaluation/     # Safety evaluation logic
-│   ├── package.json
-│   └── README.md
+│   └── package.json
 │
 ├── locationDetector/       # Indoor Localization Service
 │   ├── src/
@@ -42,17 +43,15 @@ shoot-fire/
 │   │   ├── overshoot_client.py
 │   │   └── models.py       # Pydantic schemas
 │   ├── requirements.txt
-│   ├── static/             # HTML test interfaces
-│   └── README.md
+│   └── static/             # HTML test interfaces
 │
-└── live-escape/           # Real-Time Emergency Guidance
+└── live-escape/            # Real-Time Emergency Guidance
     ├── src/
     │   ├── server/         # WebSocket server
     │   ├── services/       # Path planning, guidance delivery
     │   ├── visualization/  # 3D map viewer
     │   └── types/          # TypeScript schemas
-    ├── package.json
-    └── README.md
+    └── package.json
 ```
 
 ## 🚀 Quick Start
@@ -61,8 +60,6 @@ shoot-fire/
 
 - **Node.js** 18+ (for modelbase and live-escape)
 - **Python** 3.9+ (for locationDetector)
-- **Overshoot API Key** (for computer vision features)
-  - Get one at [overshoot.ai](https://overshoot.ai)
 
 ### Installation
 
@@ -83,12 +80,6 @@ cd locationDetector
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
-
-# Create .env file
-cp .env.example .env
-# Edit .env and add: OVERSHOOT_API_KEY=your_key_here
-
-# Run server
 python -m src.api
 ```
 
@@ -99,11 +90,6 @@ Server runs on `http://localhost:8000`
 ```bash
 cd live-escape
 npm install
-
-# Create .env file
-echo "OVERSHOOT_API_KEY=your_key_here" > .env
-
-# Run development server
 npm run dev
 ```
 
@@ -123,21 +109,14 @@ An interactive web-based training application built with React and Three.js that
 - Safety evaluation and performance feedback
 - Scenario-based decision making
 
-**Tech Stack:**
-- React 19
-- Three.js / React Three Fiber
-- TypeScript
-- Vite
-
 **Key Components:**
 - `GatesBuilding.tsx` - 3D building model with multiple floors
 - `ScenarioEngine` - Manages fire scenarios and game state
 - `Pathfinder` - A* pathfinding for navigation
 - `SafetyEvaluator` - Evaluates player decisions
 
-**Documentation:**
-- See `modelbase/README.md` for detailed documentation
-- See `modelbase/COORDINATE_SYSTEM_GUIDE.md` for coordinate system details
+**Tech Stack:**
+- React 19, Three.js, React Three Fiber, TypeScript, Vite
 
 ### 2. LocationDetector: Indoor Localization Service
 
@@ -172,9 +151,8 @@ async with httpx.AsyncClient() as client:
     print(f"Landmarks: {metadata['landmarks']}")
 ```
 
-**Documentation:**
-- See `locationDetector/README.md` for full API documentation
-- See `locationDetector/QUICKSTART.md` for quick setup guide
+**Tech Stack:**
+- Python 3.9+, FastAPI, Pydantic, HTTPX, Pillow
 
 ### 3. Live-Escape: Real-Time Emergency Guidance
 
@@ -205,8 +183,8 @@ Mobile Client → Video Stream → Overshoot API → Structured JSON
 - `video-analysis` - Receive analysis results
 - `guidance-update` - Receive evacuation guidance
 
-**Documentation:**
-- See `live-escape/README.md` for detailed documentation
+**Tech Stack:**
+- Node.js, Express, Socket.io, ngraph.path, munkres-js, Zod, TypeScript
 
 ## 🔄 Integration Flow
 
@@ -257,32 +235,11 @@ npm run build        # Build for production
 npm start            # Run production server
 ```
 
-## 📝 Configuration
-
-### Environment Variables
-
-**LocationDetector** (`.env`):
-```bash
-OVERSHOOT_API_KEY=your_api_key_here
-OVERSHOOT_API_URL=https://api.overshoot.ai/v1/vision
-API_PORT=8000
-API_DEBUG=false
-```
-
-**Live-Escape** (`.env`):
-```bash
-OVERSHOOT_API_KEY=your_api_key_here
-PORT=3000
-```
-
-⚠️ **Never commit `.env` files or API keys to git!**
-
 ## 🧪 Testing
 
 ### Modelbase
 - Interactive testing via browser interface
 - Scenario testing through ScenarioPanel component
-- See `modelbase/TESTING_SUMMARY.md`
 
 ### LocationDetector
 ```bash
@@ -299,26 +256,6 @@ curl http://localhost:8000/health
 # Test WebSocket connection
 wscat -c ws://localhost:3000
 ```
-
-## 📚 Documentation
-
-Each component has its own detailed README:
-
-- **Modelbase**: `modelbase/README.md`
-  - Coordinate system guide
-  - Testing instructions
-  - Component architecture
-
-- **LocationDetector**: `locationDetector/README.md`
-  - API documentation
-  - Client examples (Python, JavaScript, Swift)
-  - Prompt engineering details
-  - Failure case handling
-
-- **Live-Escape**: `live-escape/README.md`
-  - WebSocket API reference
-  - Integration guide
-  - Performance considerations
 
 ## 🏗️ Architecture Highlights
 
@@ -361,13 +298,6 @@ MIT License
 - Uses [Three.js](https://threejs.org/) for 3D visualization
 - [React Three Fiber](https://docs.pmnd.rs/react-three-fiber) for React integration
 - Carnegie Mellon University building models
-
-## 🔗 Related Documentation
-
-- `modelbase/COORDINATE_SYSTEM_GUIDE.md` - Coordinate system reference
-- `locationDetector/QUICKSTART.md` - Quick setup guide
-- `locationDetector/docs/PROMPT_ENGINEERING.md` - AI prompt details
-- `live-escape/INTEGRATION_STEPS.md` - Integration guide
 
 ---
 
