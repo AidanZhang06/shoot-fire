@@ -1216,8 +1216,8 @@
                     guidanceActive = true;
                 }
 
-                // Update all UI components
-                updateImmediateAction(payload.immediateActions[0]);
+                // DISABLED: Arrow keys control the immediate action now
+                // updateImmediateAction(payload.immediateActions[0]);
                 updateProgressInfo(payload.route);
                 updateHazardWarnings(payload.route.hazardWarnings);
                 speakInstruction(payload.audio);
@@ -1226,26 +1226,28 @@
             socket.on('hazard-alert', (alert) => {
                 console.log('⚠️ HAZARD ALERT:', alert);
 
+                // DISABLED: Arrow keys control the immediate action now
                 // Flash the hazard warning
-                const actionElement = document.getElementById('immediate-action');
-                actionElement.style.background = 'rgba(242, 92, 84, 0.98)'; // orange-900
-                actionElement.style.borderColor = '#f25c54';
-                actionElement.style.color = 'white';
-                actionElement.classList.add('hazard-flash');
+                // const actionElement = document.getElementById('immediate-action');
+                // actionElement.style.background = 'rgba(242, 92, 84, 0.98)'; // orange-900
+                // actionElement.style.borderColor = '#f25c54';
+                // actionElement.style.color = 'white';
+                // actionElement.classList.add('hazard-flash');
 
-                // Update text
-                document.getElementById('action-text').textContent = alert.immediateActions[0].description.toUpperCase();
+                // DISABLED: Arrow keys control the text now
+                // document.getElementById('action-text').textContent = alert.immediateActions[0].description.toUpperCase();
 
                 // Speak immediately
                 speakInstruction(alert.audio, true);
 
+                // DISABLED: Arrow keys control the display now
                 // Reset style after 3 seconds
-                setTimeout(() => {
-                    actionElement.style.background = 'rgba(255, 255, 255, 0.98)';
-                    actionElement.style.borderColor = 'var(--border-color)';
-                    actionElement.style.color = 'var(--text-primary)';
-                    actionElement.classList.remove('hazard-flash');
-                }, 3000);
+                // setTimeout(() => {
+                //     actionElement.style.background = 'rgba(255, 255, 255, 0.98)';
+                //     actionElement.style.borderColor = 'var(--border-color)';
+                //     actionElement.style.color = 'var(--text-primary)';
+                //     actionElement.classList.remove('hazard-flash');
+                // }, 3000);
             });
 
             socket.on('evacuation-complete', (data) => {
@@ -2079,6 +2081,99 @@ REMEMBER: You are a SENSOR, not a localizer. Extract observations, not conclusio
             // Reinitialize Lucide icons for new content
             lucide.createIcons();
         }
+
+        // Arrow key controls for guidance display
+        // This function manages the immediate action display and keeps it persistent
+        // until a different arrow key is pressed
+        let currentGuidanceState = { icon: 'arrow-up', text: 'CONTINUE STRAIGHT' };
+
+        function setupArrowKeyControls() {
+            const actionElement = document.getElementById('immediate-action');
+            const textElement = document.getElementById('action-text');
+            const guidanceOverlay = document.getElementById('guidance-overlay');
+
+            // Show the guidance overlay
+            guidanceOverlay.style.display = 'block';
+
+            // Function to update and persist the action display
+            function updateAction(iconName, text) {
+                console.log(`🎯 updateAction called - Icon: "${iconName}", Text: "${text}"`);
+
+                // Update the persistent state
+                currentGuidanceState.icon = iconName;
+                currentGuidanceState.text = text;
+
+                // Update text
+                textElement.textContent = text;
+
+                // Get icon element fresh each time
+                const iconElement = document.getElementById('action-icon');
+
+                // Completely replace the icon element
+                const newIcon = document.createElement('i');
+                newIcon.id = 'action-icon';
+                newIcon.setAttribute('data-lucide', iconName);
+                newIcon.style.width = '20px';
+                newIcon.style.height = '20px';
+                newIcon.style.color = 'var(--orange-500)';
+
+                // Replace the old icon with the new one
+                if (iconElement && iconElement.parentNode) {
+                    iconElement.parentNode.replaceChild(newIcon, iconElement);
+                }
+
+                // Re-render icons - this recreates the SVG from the data-lucide attribute
+                lucide.createIcons();
+
+                // Verify icon was updated
+                console.log(`✅ Icon replaced - data-lucide="${newIcon.getAttribute('data-lucide')}"`);
+
+                // Add pulse animation
+                actionElement.classList.remove('guidance-pulse');
+                void actionElement.offsetWidth; // Force reflow
+                actionElement.classList.add('guidance-pulse');
+            }
+
+            // Set initial state (straight)
+            updateAction('arrow-up', 'CONTINUE STRAIGHT');
+
+            // Handle arrow key presses
+            window.addEventListener('keydown', (event) => {
+                console.log(`⌨️ Key pressed: ${event.key}`);
+
+                // Prevent default scrolling behavior
+                if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+                    event.preventDefault();
+                    console.log(`🎮 Arrow key detected: ${event.key}`);
+                }
+
+                if (event.key === 'ArrowUp') {
+                    // Forward/Up arrow → Continue Straight
+                    updateAction('arrow-up', 'CONTINUE STRAIGHT');
+                } else if (event.key === 'ArrowRight') {
+                    // Right arrow → Turn Right 87 degrees (curved turn arrow)
+                    updateAction('corner-up-right', 'TURN RIGHT 87 DEGREES');
+                } else if (event.key === 'ArrowLeft') {
+                    // Left arrow → Turn Left 92 degrees (curved turn arrow)
+                    updateAction('corner-up-left', 'TURN LEFT 92 DEGREES');
+                } else if (event.key === 'ArrowDown') {
+                    // Down arrow → U-Turn / Turn Around
+                    updateAction('arrow-down', 'TURN AROUND');
+                }
+            });
+
+            // Expose function to restore state if socket tries to override
+            window.forceRestoreGuidanceState = function() {
+                updateAction(currentGuidanceState.icon, currentGuidanceState.text);
+            };
+
+            console.log('✅ Arrow key controls enabled (↑ = straight, → = right turn, ← = left turn, ↓ = turn around)');
+        }
+
+        // Setup arrow key controls when page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(setupArrowKeyControls, 1000);
+        });
 
         // Initialize
         initSocket();
