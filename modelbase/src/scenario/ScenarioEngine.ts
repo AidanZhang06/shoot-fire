@@ -78,6 +78,10 @@ export class ScenarioEngine {
     return reachableExits.sort((a, b) => a.path.totalCost - b.path.totalCost);
   }
 
+  getStateManager(): ScenarioStateManager {
+    return this.stateManager;
+  }
+
   cleanup(): void {
     this.stop();
   }

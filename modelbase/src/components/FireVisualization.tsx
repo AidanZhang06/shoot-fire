@@ -1,87 +1,144 @@
 import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Box, Sphere } from '@react-three/drei';
-import { FireLocation } from '../ai/types';
+import { Sphere } from '@react-three/drei';
+import * as THREE from 'three';
+
+interface FireLocation {
+  position: [number, number, number];
+  intensity: number;
+  description?: string;
+}
+
+interface SmokeArea {
+  nodes?: string[];
+  level: number;
+  region?: string;
+  position?: [number, number, number];
+}
 
 interface FireVisualizationProps {
   fireLocations: FireLocation[];
+  smokeAreas?: SmokeArea[];
 }
 
-export function FireVisualization({ fireLocations }: FireVisualizationProps) {
+export function FireVisualization({ fireLocations, smokeAreas = [] }: FireVisualizationProps) {
   const fireRefs = useRef<THREE.Mesh[]>([]);
+  const timeRef = useRef(0);
+
+  useFrame((state, delta) => {
+    timeRef.current += delta;
+    
+    fireRefs.current.forEach((ref, index) => {
+      if (ref && fireLocations[index]) {
+        const intensity = fireLocations[index].intensity;
+        const scale = 1 + Math.sin(timeRef.current * 3) * 0.3 * intensity;
+        ref.scale.set(scale, scale * 1.2, scale);
+      }
+    });
+  });
 
   if (!fireLocations || fireLocations.length === 0) {
     return null;
   }
 
-  useFrame((state) => {
-    fireRefs.current.forEach((ref, index) => {
-      if (ref && fireLocations[index]) {
-        // Animate fire with pulsing effect
-        const fire = fireLocations[index];
-        const intensity = fire.intensity;
-        const scale = 1 + Math.sin(state.clock.elapsedTime * 2) * 0.2 * intensity;
-        ref.scale.set(scale, scale, scale);
-      }
-    });
-  });
-
   return (
     <group>
+      {/* Fire effects */}
       {fireLocations.map((fire, index) => (
         <group key={`fire-${index}`} position={fire.position}>
-          {/* Fire base - orange/red glow */}
+          {/* Main fire glow */}
           <Sphere
             ref={(el) => {
               if (el) fireRefs.current[index] = el;
             }}
-            args={[1.5 * fire.intensity, 16, 16]}
-            position={[0, 0.5, 0]}
+            args={[2 * fire.intensity, 16, 16]}
+            position={[0, 1, 0]}
           >
             <meshStandardMaterial
-              color="#ff4400"
-              emissive="#ff6600"
-              emissiveIntensity={fire.intensity}
+              color="#ff2200"
+              emissive="#ff4400"
+              emissiveIntensity={2 * fire.intensity}
               transparent
-              opacity={0.7 * fire.intensity}
+              opacity={0.8}
             />
           </Sphere>
 
-          {/* Fire particles - smaller spheres */}
-          {Array.from({ length: Math.floor(fire.intensity * 5) }).map((_, i) => (
+          {/* Inner bright core */}
+          <Sphere
+            args={[1 * fire.intensity, 12, 12]}
+            position={[0, 1.5, 0]}
+          >
+            <meshStandardMaterial
+              color="#ffaa00"
+              emissive="#ffcc00"
+              emissiveIntensity={3}
+              transparent
+              opacity={0.9}
+            />
+          </Sphere>
+
+          {/* Flickering particles */}
+          {[...Array(8)].map((_, i) => (
             <Sphere
-              key={`particle-${i}`}
-              args={[0.2, 8, 8]}
+              key={`spark-${i}`}
+              args={[0.15, 6, 6]}
               position={[
-                (Math.random() - 0.5) * 2 * fire.intensity,
-                Math.random() * 2 * fire.intensity + 0.5,
-                (Math.random() - 0.5) * 2 * fire.intensity
+                Math.sin(i * 0.8) * fire.intensity,
+                1 + Math.cos(i * 0.5) * fire.intensity,
+                Math.cos(i * 0.8) * fire.intensity
               ]}
             >
               <meshStandardMaterial
-                color="#ffaa00"
-                emissive="#ff8800"
-                emissiveIntensity={1}
-                transparent
-                opacity={0.8}
+                color="#ffff00"
+                emissive="#ffaa00"
+                emissiveIntensity={2}
               />
             </Sphere>
           ))}
 
-          {/* Smoke effect - dark cloud above fire */}
+          {/* Smoke rising from fire */}
           <Sphere
-            args={[2 * fire.intensity, 16, 16]}
-            position={[0, 2 * fire.intensity + 1, 0]}
+            args={[3 * fire.intensity, 12, 12]}
+            position={[0, 4, 0]}
           >
             <meshStandardMaterial
-              color="#222222"
+              color="#333333"
               transparent
               opacity={0.4 * fire.intensity}
             />
           </Sphere>
+
+          {/* Point light for illumination */}
+          <pointLight
+            color="#ff4400"
+            intensity={fire.intensity * 5}
+            distance={15}
+            decay={2}
+          />
         </group>
       ))}
+
+      {/* Smoke areas */}
+      {smokeAreas.map((smoke, index) => {
+        // Calculate smoke position - use provided position or estimate from region
+        const smokePos: [number, number, number] = smoke.position || [
+          index * 5 - 5, // Spread out
+          21, // Floor 6 height
+          0
+        ];
+        
+        return (
+          <group key={`smoke-${index}`} position={smokePos}>
+            <Sphere args={[4, 12, 12]}>
+              <meshStandardMaterial
+                color="#555555"
+                transparent
+                opacity={0.3 * smoke.level}
+              />
+            </Sphere>
+          </group>
+        );
+      })}
     </group>
   );
 }
-
