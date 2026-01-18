@@ -18,7 +18,11 @@ export function GreenDotPerson({ position = [0, 0, 0] }: GreenDotPersonProps) {
         args={[bodyRadius, bodyRadius * 0.8, bodyHeight, 8]}
         position={[0, bodyHeight / 2 + 0.2, 0]}
       >
-        <meshStandardMaterial color="#00ff00" />
+        <meshStandardMaterial
+          color="#00ff00"
+          emissive="#00ff00"
+          emissiveIntensity={0.6}
+        />
       </Cylinder>
 
       {/* Head */}
@@ -26,7 +30,11 @@ export function GreenDotPerson({ position = [0, 0, 0] }: GreenDotPersonProps) {
         args={[headRadius, 16, 16]}
         position={[0, bodyHeight + headRadius + 0.3, 0]}
       >
-        <meshStandardMaterial color="#00ff00" />
+        <meshStandardMaterial
+          color="#00ff00"
+          emissive="#00ff00"
+          emissiveIntensity={0.6}
+        />
       </Sphere>
 
       {/* Legs */}
@@ -34,15 +42,46 @@ export function GreenDotPerson({ position = [0, 0, 0] }: GreenDotPersonProps) {
         args={[0.12, 0.12, 0.6, 8]}
         position={[-0.15, 0.3, 0]}
       >
-        <meshStandardMaterial color="#00ff00" />
+        <meshStandardMaterial
+          color="#00ff00"
+          emissive="#00ff00"
+          emissiveIntensity={0.6}
+        />
       </Cylinder>
 
       <Cylinder
         args={[0.12, 0.12, 0.6, 8]}
         position={[0.15, 0.3, 0]}
       >
-        <meshStandardMaterial color="#00ff00" />
+        <meshStandardMaterial
+          color="#00ff00"
+          emissive="#00ff00"
+          emissiveIntensity={0.6}
+        />
       </Cylinder>
+
+      {/* Glowing aura around character */}
+      <pointLight
+        color="#00ff00"
+        intensity={2}
+        distance={5}
+        decay={2}
+        position={[0, 1, 0]}
+      />
+
+      {/* Optional glow sphere for extra visibility */}
+      <Sphere
+        args={[bodyRadius * 1.8, 16, 16]}
+        position={[0, bodyHeight / 2 + 0.2, 0]}
+      >
+        <meshStandardMaterial
+          color="#00ff00"
+          emissive="#00ff00"
+          emissiveIntensity={0.4}
+          transparent
+          opacity={0.2}
+        />
+      </Sphere>
     </group>
   );
 }

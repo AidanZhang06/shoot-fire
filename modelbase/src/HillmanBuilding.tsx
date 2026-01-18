@@ -10,7 +10,12 @@ interface Room {
   type?: string;
 }
 
-export function HillmanBuilding() {
+interface HillmanBuildingProps {
+  playerPosition?: [number, number, number];
+  renderDistance?: number;
+}
+
+export function HillmanBuilding({ playerPosition = [0, 0, 0], renderDistance = 30 }: HillmanBuildingProps = {}) {
   const floorHeight = 3.5;
   const wallThickness = 0.3;
   const numFloors = 7;
@@ -153,8 +158,25 @@ export function HillmanBuilding() {
               />
             </Box>
 
-            {/* Rooms */}
+            {/* Rooms - with distance-based culling */}
             {floor.rooms.map((room: Room, roomIndex: number) => {
+              // Calculate distance from player to room (3D distance)
+              // Hillman building is positioned at [-60, 0, 0]
+              const roomWorldX = room.x - 60;
+              const roomWorldY = floorIndex * floorHeight;
+              const roomWorldZ = room.z;
+
+              const distance = Math.sqrt(
+                Math.pow(playerPosition[0] - roomWorldX, 2) +
+                Math.pow(playerPosition[1] - roomWorldY, 2) +
+                Math.pow(playerPosition[2] - roomWorldZ, 2)
+              );
+
+              // Only render if within render distance
+              if (distance > renderDistance) {
+                return null;
+              }
+
               return (
                 <group key={roomIndex}>
                   {/* Room walls - lightweight materials */}

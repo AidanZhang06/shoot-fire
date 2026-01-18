@@ -58,56 +58,56 @@ export function FireVisualization({ fireLocations, smokeAreas = [] }: FireVisual
         return (
           <group key={`fire-${index}`} position={fire.position}>
             {showSmoke ? (
-              // Smoke-only view (when outside/far away)
+              // Smoke-only view (when outside/far away) - minimized size
               <>
-                {/* Large smoke plume */}
+                {/* Large smoke plume - reduced size */}
                 <Sphere
                   ref={(el) => {
                     if (el) fireRefs.current[index] = el;
                   }}
-                  args={[12 * fire.intensity, 16, 16]}
-                  position={[0, 6, 0]}
+                  args={[4 * fire.intensity, 16, 16]}
+                  position={[0, 3, 0]}
                 >
                   <meshStandardMaterial
                     color="#555555"
-                    transparent
-                    opacity={0.5 * fire.intensity}
-                  />
-                </Sphere>
-
-                {/* Rising smoke column */}
-                <Sphere
-                  args={[10 * fire.intensity, 12, 12]}
-                  position={[0, 12, 0]}
-                >
-                  <meshStandardMaterial
-                    color="#777777"
                     transparent
                     opacity={0.4 * fire.intensity}
                   />
                 </Sphere>
 
+                {/* Rising smoke column - reduced size */}
                 <Sphere
-                  args={[8 * fire.intensity, 10, 10]}
-                  position={[0, 18, 0]}
+                  args={[3.5 * fire.intensity, 12, 12]}
+                  position={[0, 6, 0]}
+                >
+                  <meshStandardMaterial
+                    color="#777777"
+                    transparent
+                    opacity={0.3 * fire.intensity}
+                  />
+                </Sphere>
+
+                <Sphere
+                  args={[3 * fire.intensity, 10, 10]}
+                  position={[0, 9, 0]}
                 >
                   <meshStandardMaterial
                     color="#999999"
                     transparent
-                    opacity={0.3 * fire.intensity}
+                    opacity={0.2 * fire.intensity}
                   />
                 </Sphere>
               </>
             ) : (
               // Full fire view (when close/inside)
               <>
-                {/* Main fire glow */}
+                {/* Main fire glow - reduced size */}
                 <Sphere
                   ref={(el) => {
                     if (el) fireRefs.current[index] = el;
                   }}
-                  args={[5 * fire.intensity, 16, 16]}
-                  position={[0, 2.5, 0]}
+                  args={[2.5 * fire.intensity, 16, 16]}
+                  position={[0, 1.5, 0]}
                 >
                   <meshStandardMaterial
                     color="#ff2200"
@@ -118,10 +118,10 @@ export function FireVisualization({ fireLocations, smokeAreas = [] }: FireVisual
                   />
                 </Sphere>
 
-                {/* Inner bright core */}
+                {/* Inner bright core - reduced size */}
                 <Sphere
-                  args={[3 * fire.intensity, 12, 12]}
-                  position={[0, 3, 0]}
+                  args={[1.5 * fire.intensity, 12, 12]}
+                  position={[0, 2, 0]}
                 >
                   <meshStandardMaterial
                     color="#ffaa00"
@@ -151,15 +151,15 @@ export function FireVisualization({ fireLocations, smokeAreas = [] }: FireVisual
                   </Sphere>
                 ))}
 
-                {/* Smoke rising from fire */}
+                {/* Smoke rising from fire - reduced size */}
                 <Sphere
-                  args={[7 * fire.intensity, 12, 12]}
-                  position={[0, 8, 0]}
+                  args={[3 * fire.intensity, 12, 12]}
+                  position={[0, 5, 0]}
                 >
                   <meshStandardMaterial
                     color="#333333"
                     transparent
-                    opacity={0.4 * fire.intensity}
+                    opacity={0.3 * fire.intensity}
                   />
                 </Sphere>
 
@@ -176,7 +176,7 @@ export function FireVisualization({ fireLocations, smokeAreas = [] }: FireVisual
         );
       })}
 
-      {/* Smoke areas */}
+      {/* Smoke areas - minimized */}
       {smokeAreas.map((smoke, index) => {
         // Calculate smoke position - use provided position or estimate from region
         const smokePos: [number, number, number] = smoke.position || [
@@ -184,14 +184,14 @@ export function FireVisualization({ fireLocations, smokeAreas = [] }: FireVisual
           21, // Floor 6 height
           0
         ];
-        
+
         return (
           <group key={`smoke-${index}`} position={smokePos}>
-            <Sphere args={[4, 12, 12]}>
+            <Sphere args={[2, 12, 12]}>
               <meshStandardMaterial
                 color="#555555"
                 transparent
-                opacity={0.3 * smoke.level}
+                opacity={0.25 * smoke.level}
               />
             </Sphere>
           </group>

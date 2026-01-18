@@ -31,7 +31,12 @@ interface Level {
   sideHallwayWidth: number;
 }
 
-export function GatesBuilding() {
+interface GatesBuildingProps {
+  playerPosition?: [number, number, number];
+  renderDistance?: number;
+}
+
+export function GatesBuilding({ playerPosition = [0, 0, 0], renderDistance = 30 }: GatesBuildingProps = {}) {
   const floorHeight = 3.5;
   const wallThickness = 0.3;
   const atriumSize = 10;
@@ -504,8 +509,24 @@ export function GatesBuilding() {
               </Box>
             )}
 
-            {/* Rooms */}
+            {/* Rooms - with distance-based culling */}
             {level.rooms.map((room: Room, roomIndex: number) => {
+              // Calculate distance from player to room (3D distance)
+              const roomWorldX = room.x + level.offsetX;
+              const roomWorldY = yPos;
+              const roomWorldZ = room.z;
+
+              const distance = Math.sqrt(
+                Math.pow(playerPosition[0] - roomWorldX, 2) +
+                Math.pow(playerPosition[1] - roomWorldY, 2) +
+                Math.pow(playerPosition[2] - roomWorldZ, 2)
+              );
+
+              // Only render if within render distance
+              if (distance > renderDistance) {
+                return null;
+              }
+
               return (
                 <group key={roomIndex}>
                   {/* Room walls - lightweight materials */}

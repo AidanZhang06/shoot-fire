@@ -99,8 +99,9 @@ export function CameraRotationTracker({ onRotationChange }: { onRotationChange: 
     camera.getWorldDirection(direction);
 
     // Calculate angle in degrees (0° = North/+Z, 90° = East/+X)
+    // Inverted: flip the angle so East/West are reversed
     const angle = Math.atan2(direction.x, direction.z) * (180 / Math.PI);
-    onRotationChange(-angle);
+    onRotationChange(angle);
   });
 
   return null;

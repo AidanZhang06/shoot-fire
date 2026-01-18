@@ -67,3 +67,32 @@ export function generateFiresForFloors(
   return floors.flatMap(floorNum => generateQuadrantFires(floorNum, intensity));
 }
 
+/**
+ * Generate smoke only in Q1 (east corridor) with progressive intensity
+ * @param floorNum - Floor number (1-9)
+ * @param step - Current scenario step (0-based)
+ * @param maxSteps - Maximum number of steps in scenario (default: 10)
+ * @returns Array with single FireLocation for Q1 smoke
+ */
+export function generateProgressiveEastSmoke(
+  floorNum: number,
+  step: number,
+  maxSteps: number = 10
+): FireLocation[] {
+  const positions = getQuadrantPositions(floorNum);
+
+  // Calculate intensity based on current step (starts at 0.1, grows to 0.9)
+  const minIntensity = 0.1;
+  const maxIntensity = 0.9;
+  const progress = Math.min(step / maxSteps, 1);
+  const intensity = minIntensity + (maxIntensity - minIntensity) * progress;
+
+  return [
+    {
+      position: positions.q1,
+      intensity,
+      description: 'East corridor smoke (Q1)'
+    }
+  ];
+}
+

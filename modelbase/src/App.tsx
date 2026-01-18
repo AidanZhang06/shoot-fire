@@ -11,6 +11,8 @@ import { ExitMarkers } from './components/ExitMarkers';
 import { FirstPersonCamera } from './components/FirstPersonCamera';
 import { Stairs } from './components/Stairs';
 import { CoordinateSystem } from './components/CoordinateSystem';
+import { ExitDoor } from './components/ExitDoor';
+import { ExitPathMarkers } from './components/ExitPathMarkers';
 import { ScenarioEngine } from './scenario/ScenarioEngine';
 import { NavigationGraphImpl } from './navigation/NavigationGraph';
 import { GraphBuilder } from './navigation/GraphBuilder';
@@ -18,7 +20,7 @@ import { FireScenario } from './ai/types';
 import { ScenarioState } from './scenario/types';
 import { ParsedScenario } from './utils/ScenarioParser';
 import { CompassLegend, CameraRotationTracker } from './components/CompassLegend';
-import { generateQuadrantFires } from './utils/quadrantFires';
+import { generateQuadrantFires, generateProgressiveEastSmoke } from './utils/quadrantFires';
 
 // Building data for navigation
 const mockBuildingLevels = [
@@ -230,6 +232,17 @@ function App() {
     }
   }, [scenarioState]);
 
+  const handleReset = useCallback(() => {
+    // Reset player to floor 6 starting position
+    setPlayerPosition(POSITIONS.start);
+    setTargetPosition(POSITIONS.start);
+    setCurrentStep(0);
+    setScenario(null);
+    setScenarioState(null);
+    setScenarioEngine(null);
+    setParsedScenario(null);
+  }, []);
+
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh' }}>
       {/* 3D Canvas - 75% width */}
@@ -238,7 +251,7 @@ function App() {
         <CompassLegend rotation={cameraRotation} />
 
         <Canvas
-          camera={{ position: [80, 60, 80], fov: 50 }}
+          camera={{ position: [100, 80, 100], fov: 55 }}
           style={{ background: 'linear-gradient(180deg, #0f0f1a 0%, #1a1a2e 50%, #252545 100%)' }}
         >
           {/* Lighting */}
@@ -247,15 +260,57 @@ function App() {
           <pointLight position={[-30, 20, 30]} intensity={0.4} />
 
           {/* Buildings */}
-          <GatesBuilding />
-          <HillmanBuilding />
+          <GatesBuilding playerPosition={playerPosition} renderDistance={30} />
+          <HillmanBuilding playerPosition={playerPosition} renderDistance={30} />
           <ConnectingBridges />
+
+          {/* Exit Doors at ground level - actual exits to escape through */}
+          <ExitDoor position={[22.5, 0, 0]} rotation={[0, -Math.PI / 2, 0]} label="EXIT 1 - EAST" />
+          <ExitDoor position={[-22.5, 0, 0]} rotation={[0, Math.PI / 2, 0]} label="EXIT 2 - WEST" />
+          <ExitDoor position={[-15, 0, 17]} rotation={[0, Math.PI, 0]} label="EXIT 3 - SOUTH" />
+          <ExitDoor position={[-15, 0, -17]} rotation={[0, 0, 0]} label="EXIT 4 - NORTH" />
 
           {/* Stairs - ground floor stairs also function as exits */}
           <Stairs position={[19, 0, 0]} direction="east" width={3} isExit={true} />
           <Stairs position={[-19, 0, 0]} direction="west" width={3} isExit={true} />
           <Stairs position={[-15, 0, 12]} direction="south" width={3} isExit={true} />
           <Stairs position={[-15, 0, -12]} direction="north" width={3} isExit={true} />
+
+          {/* West side stairs - all floors */}
+          {[1, 2, 3, 4, 5, 6, 7, 8].map(floorNum => {
+            const mainWingWidth = 45 - (floorNum - 1) * 1.2;
+            const offsetX = floorNum >= 7 ? 2 + (floorNum - 6) * 0.8 : 0;
+            const westX = -(mainWingWidth / 2) + 2 + offsetX;
+            const yPos = (floorNum - 1) * 3.5;
+
+            return (
+              <Stairs
+                key={`west-${floorNum}`}
+                position={[westX, yPos, 0]}
+                direction="west"
+                width={2.5}
+                label={`Floor ${floorNum}-${floorNum + 1}`}
+              />
+            );
+          })}
+
+          {/* East side stairs - all floors */}
+          {[1, 2, 3, 4, 5, 6, 7, 8].map(floorNum => {
+            const mainWingWidth = 45 - (floorNum - 1) * 1.2;
+            const offsetX = floorNum >= 7 ? 2 + (floorNum - 6) * 0.8 : 0;
+            const eastX = (mainWingWidth / 2) - 2 + offsetX;
+            const yPos = (floorNum - 1) * 3.5;
+
+            return (
+              <Stairs
+                key={`east-${floorNum}`}
+                position={[eastX, yPos, 0]}
+                direction="east"
+                width={2.5}
+                label={`Floor ${floorNum}-${floorNum + 1}`}
+              />
+            );
+          })}
 
           {/* Coordinate System (toggle) */}
           {showCoordinateAxes && <CoordinateSystem size={50} />}
@@ -277,13 +332,16 @@ function App() {
             />
           )}
 
-          {/* Quadrant Fires - Q1 (East), Q2 (Center), Q3 (North) */}
+          {/* Progressive East Corridor Smoke - Q1 only, grows with steps */}
           {showQuadrantFires && scenario && scenarioState && (
             <FireVisualization
-              fireLocations={generateQuadrantFires(quadrantFireFloor, 0.8)}
+              fireLocations={generateProgressiveEastSmoke(quadrantFireFloor, currentStep, 10)}
               smokeAreas={[]}
             />
           )}
+
+          {/* Exit Path Markers - Floor indicators showing the way to exits */}
+          <ExitPathMarkers floor={6} />
 
           {/* Exit Markers - Always visible */}
           <ExitMarkers
@@ -345,6 +403,7 @@ function App() {
         onToggleFirstPerson={setFirstPersonMode}
         firstPersonMode={firstPersonMode}
         onScenarioParsed={handleScenarioParsed}
+        onReset={handleReset}
       />
     </div>
   );

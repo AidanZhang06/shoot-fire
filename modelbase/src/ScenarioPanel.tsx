@@ -12,6 +12,7 @@ interface ScenarioPanelProps {
   onToggleFirstPerson?: (enabled: boolean) => void;
   firstPersonMode?: boolean;
   onScenarioParsed?: (parsed: ParsedScenario) => void;
+  onReset?: () => void;
 }
 
 interface ScenarioChoice {
@@ -32,7 +33,8 @@ export function ScenarioPanel({
   scenario: externalScenario,
   onToggleFirstPerson,
   firstPersonMode = false,
-  onScenarioParsed
+  onScenarioParsed,
+  onReset
 }: ScenarioPanelProps) {
   const [scenario, setScenario] = useState<FireScenario | null>(null);
   const [loading, setLoading] = useState(false);
@@ -457,6 +459,12 @@ export function ScenarioPanel({
               setFeedback(null);
               setStep(0);
               setEscaped(false);
+              setCurrentSituation('');
+              setChoices([]);
+              // Reset player position to floor 6
+              if (onReset) {
+                onReset();
+              }
             }}
             style={{
               padding: '10px 20px',
