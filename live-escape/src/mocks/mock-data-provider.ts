@@ -38,48 +38,50 @@ export class MockDataProvider {
   }
 
   /**
-   * Generate mock exits at building perimeter
+   * Generate mock exits based on L-shaped building geometry (Gates Building)
+   * Main wing: 45m wide x 18m deep, centered at origin
+   * Side wing: 15m wide x 35m deep, extending south from west end
    */
   getMockExits(): Map<string, ExitInfo> {
     const exits = new Map<string, ExitInfo>();
 
-    // Exit 1: North wall
+    // Exit 1: Main Entrance - East side of main wing (ground floor)
+    exits.set('exit-main-entrance', {
+      id: 'exit-main-entrance',
+      position: { x: 22.5, y: 0, z: 0 }, // East wall center
+      capacity: 40, // people per minute - main entrance has high capacity
+      currentLoad: 0,
+      status: 'clear',
+      lastVerified: Date.now(),
+      verificationSource: 'inference'
+    });
+
+    // Exit 2: North Emergency Exit - North side of main wing (ground floor)
     exits.set('exit-north', {
       id: 'exit-north',
-      position: { x: 25, y: 0, z: 0 },
-      capacity: 30, // people per minute
+      position: { x: 0, y: 0, z: -9 }, // North wall center
+      capacity: 25,
       currentLoad: 0,
       status: 'clear',
       lastVerified: Date.now(),
       verificationSource: 'inference'
     });
 
-    // Exit 2: South wall
+    // Exit 3: South Emergency Exit - South end of side wing (ground floor)
     exits.set('exit-south', {
       id: 'exit-south',
-      position: { x: 25, y: this.BUILDING_HEIGHT, z: 0 },
-      capacity: 30,
+      position: { x: -15, y: 0, z: 35 }, // South wall of side wing
+      capacity: 25,
       currentLoad: 0,
       status: 'clear',
       lastVerified: Date.now(),
       verificationSource: 'inference'
     });
 
-    // Exit 3: East wall
-    exits.set('exit-east', {
-      id: 'exit-east',
-      position: { x: this.BUILDING_WIDTH, y: 25, z: 0 },
-      capacity: 20,
-      currentLoad: 0,
-      status: 'clear',
-      lastVerified: Date.now(),
-      verificationSource: 'inference'
-    });
-
-    // Exit 4: West wall
+    // Exit 4: West Emergency Exit - West side of side wing (ground floor)
     exits.set('exit-west', {
       id: 'exit-west',
-      position: { x: 0, y: 25, z: 0 },
+      position: { x: -22.5, y: 0, z: 17 }, // West wall center of side wing
       capacity: 20,
       currentLoad: 0,
       status: 'clear',

@@ -39,6 +39,7 @@ export class Map3DViewer {
   private routeVisible = true;
   private exitsVisible = true;
   private lastUserPosition: THREE.Vector3 | null = null;
+  private lastUserHeading: number | null = null; // Heading in degrees (0-360, 0=North)
 
   constructor(config: Map3DViewerConfig) {
     this.container = config.container;
@@ -127,8 +128,15 @@ export class Map3DViewer {
   /**
    * Update user position on the map
    */
-  updateUserPosition(position: Vector3): void {
+  updateUserPosition(position: Vector3, heading?: number): void {
     this.userMarker.updatePosition(position);
+
+    // Update heading if provided
+    if (heading !== undefined) {
+      this.userMarker.setHeading(heading);
+      this.lastUserHeading = heading;
+    }
+
     this.lastUserPosition = new THREE.Vector3(position.x, position.y, position.z);
     // Camera following now handled in animate() loop
   }
@@ -205,15 +213,29 @@ export class Map3DViewer {
     }
 
     this.controls = new OrbitControlsClass(this.camera, this.renderer.domElement);
+
+    // Sensitivity settings - make controls more responsive
+    this.controls.zoomSpeed = 4.0;        // Much faster zoom for better interactivity
+    this.controls.rotateSpeed = 1.2;      // Slightly faster rotation
+    this.controls.panSpeed = 1.5;         // Faster panning
+
+    // Damping for smooth movement
     this.controls.enableDamping = true;
-    this.controls.dampingFactor = 0.05;
-    this.controls.minDistance = 20;
-    this.controls.maxDistance = 150;
-    this.controls.maxPolarAngle = Math.PI / 2.5; // Don't go below ground
+    this.controls.dampingFactor = 0.08;   // Slightly more responsive than default
+
+    // Distance limits
+    this.controls.minDistance = 10;       // Can zoom in closer
+    this.controls.maxDistance = 200;      // Can zoom out further
+
+    // Angle limits
+    this.controls.maxPolarAngle = Math.PI / 2.2; // Don't go below ground
+    this.controls.minPolarAngle = 0;      // Allow full overhead view
+
+    // Initial target
     this.controls.target.set(0, 0, 0);
     this.controls.enabled = false; // Start disabled (auto-follow active by default)
 
-    console.log('[Map3DViewer] OrbitControls initialized');
+    console.log('[Map3DViewer] OrbitControls initialized with enhanced sensitivity');
   }
 
   /**
@@ -312,15 +334,35 @@ export class Map3DViewer {
         this.controls.enabled = false;
       }
 
-      // Smoothly follow user
-      const targetX = this.lastUserPosition.x;
-      const targetY = this.lastUserPosition.y + 20;
-      const targetZ = this.lastUserPosition.z + 30;
+      // Position camera behind user based on heading
+      const cameraDistance = 30; // Distance behind user
+      const cameraHeight = 20; // Height above user
 
+      let targetX, targetZ;
+
+      if (this.lastUserHeading !== null) {
+        // Use heading to position camera behind user
+        const headingRad = (this.lastUserHeading * Math.PI) / 180;
+        const offsetX = Math.sin(headingRad) * cameraDistance;
+        const offsetZ = -Math.cos(headingRad) * cameraDistance;
+
+        targetX = this.lastUserPosition.x + offsetX;
+        targetZ = this.lastUserPosition.z + offsetZ;
+      } else {
+        // Default bird's eye view if no heading
+        targetX = this.lastUserPosition.x;
+        targetZ = this.lastUserPosition.z + cameraDistance;
+      }
+
+      const targetY = this.lastUserPosition.y + cameraHeight;
+
+      // Smoothly lerp camera to target position
       this.camera.position.lerp(
         new THREE.Vector3(targetX, targetY, targetZ),
         0.05
       );
+
+      // Look at user position
       this.camera.lookAt(
         this.lastUserPosition.x,
         this.lastUserPosition.y,

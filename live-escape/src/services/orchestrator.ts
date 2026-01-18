@@ -94,16 +94,19 @@ export class EvacuationOrchestrator {
     this.cycleCount++;
 
     try {
-      console.log(`\n[Orchestrator] ═══ Cycle ${this.cycleCount} ═══`);
+      // Only log every 10th cycle to reduce noise
+      const shouldLog = this.cycleCount % 10 === 0;
+
+      if (shouldLog) {
+        console.log(`\n[Orchestrator] ═══ Cycle ${this.cycleCount} ═══`);
+      }
 
       // Skip if no users
       if (this.users.size === 0) {
-        console.log('[Orchestrator] No active users, skipping cycle');
         return;
       }
 
       // Phase 1: Exit Assignment
-      console.log('[Orchestrator] Phase 1: Exit Assignment...');
       const assignmentStart = Date.now();
 
       try {
@@ -118,14 +121,15 @@ export class EvacuationOrchestrator {
         this.exits = this.exitAssigner.updateExitLoads(this.exits, assignments);
 
         const assignmentTime = Date.now() - assignmentStart;
-        console.log(`  ✓ Assigned ${assignments.size} users to exits (${assignmentTime}ms)`);
+        if (shouldLog) {
+          console.log(`  ✓ Assigned ${assignments.size} users to exits (${assignmentTime}ms)`);
+        }
       } catch (error: any) {
         console.error(`  ✗ Exit assignment failed: ${error.message}`);
         return;
       }
 
       // Phase 2: Path Planning
-      console.log('[Orchestrator] Phase 2: Path Planning...');
       const pathStart = Date.now();
       const routes = new Map<string, Route>();
 
@@ -156,11 +160,12 @@ export class EvacuationOrchestrator {
       }
 
       const pathTime = Date.now() - pathStart;
-      console.log(`  ✓ Computed ${routes.size} paths (${pathTime}ms)`);
+      if (shouldLog) {
+        console.log(`  ✓ Computed ${routes.size} paths (${pathTime}ms)`);
+      }
 
       // Phase 3: Guidance Delivery
       if (this.ENABLE_GUIDANCE_DELIVERY) {
-        console.log('[Orchestrator] Phase 3: Guidance Delivery...');
         const guidanceStart = Date.now();
 
         for (const [userId, route] of routes) {
@@ -181,14 +186,16 @@ export class EvacuationOrchestrator {
         }
 
         const guidanceTime = Date.now() - guidanceStart;
-        console.log(`  ✓ Delivered guidance to ${routes.size} users (${guidanceTime}ms)`);
-      } else {
-        console.log('[Orchestrator] Phase 3: Guidance Delivery DISABLED (waiting for accurate positioning)');
+        if (shouldLog) {
+          console.log(`  ✓ Delivered guidance to ${routes.size} users (${guidanceTime}ms)`);
+        }
       }
 
       // Metrics
       this.lastCycleTime = Date.now() - cycleStart;
-      console.log(`[Orchestrator] ═══ Cycle ${this.cycleCount} completed in ${this.lastCycleTime}ms ═══`);
+      if (shouldLog) {
+        console.log(`[Orchestrator] ═══ Cycle ${this.cycleCount} completed in ${this.lastCycleTime}ms ═══`);
+      }
 
       // Warn if cycle time is approaching limit
       if (this.lastCycleTime > 900) {

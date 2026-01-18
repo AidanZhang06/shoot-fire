@@ -121,12 +121,13 @@ io.on('connection', (socket) => {
       groupSize: 1
     });
 
-    // Add user to orchestrator
+    // Add user to orchestrator - Floor 9, center of left side (as shown in floor plan)
+    const START_POSITION = { x: -20, y: 28, z: 5 }; // Center of left side, Floor 9
     orchestrator.updateUserState(userId, {
       id: userId,
-      position: position || { x: Math.random() * 50, y: Math.random() * 50, z: 0 },
-      heading: Math.random() * 360,
-      viewingDirection: Math.random() * 360,
+      position: position && position.x !== 0 ? position : START_POSITION,
+      heading: 0, // Will be updated by GPS trajectory
+      viewingDirection: 0,
       speed: 0,
       groupSize: 1,
       nearExit: false,

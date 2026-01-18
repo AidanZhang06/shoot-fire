@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auto-Walk Test</title>
+</head>
+<body>
+    <h1>Testing Auto-Walk Animation</h1>
+    <div id="status"></div>
+    <script>
+        // Simple test to verify the animation logic works
+        let currentWaypointIndex = 0;
+        let waypointProgress = 0;
+        const WALK_SPEED = 2.0;
+
+        const route = {
+            waypoints: [
+                { x: -20, y: 28, z: 5 },
+                { x: -15, y: 28, z: 5 },
+                { x: -10, y: 28, z: 5 },
+                { x: -5, y: 28, z: 5 },
+                { x: 0, y: 28, z: 8 },
+            ]
+        };
+
+        let position = { ...route.waypoints[0] };
+
+        function updatePosition(deltaTime) {
+            if (currentWaypointIndex >= route.waypoints.length - 1) {
+                console.log("Reached end!");
+                return;
+            }
+
+            const current = route.waypoints[currentWaypointIndex];
+            const next = route.waypoints[currentWaypointIndex + 1];
+
+            const dx = next.x - current.x;
+            const dy = next.y - current.y;
+            const dz = next.z - current.z;
+            const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+            const moveDistance = WALK_SPEED * deltaTime;
+            const progressIncrement = moveDistance / distance;
+
+            waypointProgress += progressIncrement;
+
+            if (waypointProgress >= 1.0) {
+                currentWaypointIndex++;
+                waypointProgress = 0;
+                console.log(`Reached waypoint ${currentWaypointIndex}`);
+                return;
+            }
+
+            position.x = current.x + dx * waypointProgress;
+            position.y = current.y + dy * waypointProgress;
+            position.z = current.z + dz * waypointProgress;
+
+            document.getElementById('status').innerHTML = `
+                Waypoint: ${currentWaypointIndex}/${route.waypoints.length}<br>
+                Progress: ${(waypointProgress * 100).toFixed(1)}%<br>
+                Position: (${position.x.toFixed(1)}, ${position.y.toFixed(1)}, ${position.z.toFixed(1)})
+            `;
+        }
+
+        let lastTime = performance.now();
+        function animate() {
+            const now = performance.now();
+            const deltaTime = (now - lastTime) / 1000;
+            lastTime = now;
+
+            updatePosition(deltaTime);
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>

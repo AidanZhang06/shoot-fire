@@ -15,7 +15,7 @@ export class UserMarker {
 
   private targetPosition: THREE.Vector3;
   private currentPosition: THREE.Vector3;
-  private lerpSpeed = 0.1; // Smooth transition speed
+  private lerpSpeed = 1.0; // Direct movement - no lag
 
   private pulseTime = 0;
   private enablePulse = true;
@@ -29,12 +29,13 @@ export class UserMarker {
   }
 
   private createGeometry(): void {
-    const personHeight = 1.7;
-    const headRadius = 0.3;
-    const bodyRadius = 0.25;
-    const bodyHeight = 1.0;
-    const legRadius = 0.12;
-    const legHeight = 0.6;
+    // Make the person 3x larger for better visibility in minimap
+    const personHeight = 5.1;
+    const headRadius = 0.9;
+    const bodyRadius = 0.75;
+    const bodyHeight = 3.0;
+    const legRadius = 0.36;
+    const legHeight = 1.8;
 
     // Material - bright green for visibility
     const material = new THREE.MeshStandardMaterial({
@@ -67,15 +68,30 @@ export class UserMarker {
     // Left leg (cylinder)
     const legGeometry = new THREE.CylinderGeometry(legRadius, legRadius, legHeight, 8);
     this.leftLeg = new THREE.Mesh(legGeometry, material);
-    this.leftLeg.position.set(-0.15, legHeight / 2, 0);
+    this.leftLeg.position.set(-0.45, legHeight / 2, 0);
     this.leftLeg.castShadow = true;
     this.group.add(this.leftLeg);
 
     // Right leg (cylinder)
     this.rightLeg = new THREE.Mesh(legGeometry, material);
-    this.rightLeg.position.set(0.15, legHeight / 2, 0);
+    this.rightLeg.position.set(0.45, legHeight / 2, 0);
     this.rightLeg.castShadow = true;
     this.group.add(this.rightLeg);
+
+    // Directional indicator cone (shows which way user is facing)
+    const coneGeometry = new THREE.ConeGeometry(0.9, 2.4, 8);
+    const coneMaterial = new THREE.MeshStandardMaterial({
+      color: 0x3b82f6, // Blue color for direction indicator
+      emissive: 0x3b82f6,
+      emissiveIntensity: 0.3,
+      roughness: 0.5,
+      metalness: 0.3
+    });
+    const cone = new THREE.Mesh(coneGeometry, coneMaterial);
+    cone.rotation.x = Math.PI; // Point forward (cone default points up)
+    cone.position.set(0, bodyHeight + headRadius + 0.8, 0); // Above head
+    cone.castShadow = true;
+    this.group.add(cone);
   }
 
   /**
@@ -92,6 +108,15 @@ export class UserMarker {
     this.currentPosition.set(position.x, position.y, position.z);
     this.targetPosition.set(position.x, position.y, position.z);
     this.group.position.copy(this.currentPosition);
+  }
+
+  /**
+   * Set heading direction (in degrees, 0-360 where 0=North)
+   * Rotates the entire marker group to face the given direction
+   */
+  setHeading(degrees: number): void {
+    const radians = (degrees * Math.PI) / 180;
+    this.group.rotation.y = -radians; // Negative because of coordinate system
   }
 
   /**
