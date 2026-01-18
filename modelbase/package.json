@@ -1,7 +1,7 @@
 {
-  "name": "threejs-building-model",
+  "name": "fire-escape-educator",
   "version": "1.0.0",
-  "description": "Three.js application for generating 3D transparent building models from SVG",
+  "description": "Fire escape educator - Interactive 3D fire safety training application",
   "type": "module",
   "scripts": {
     "dev": "vite",

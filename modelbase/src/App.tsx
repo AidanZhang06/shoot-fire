@@ -239,7 +239,7 @@ function App() {
 
         <Canvas
           camera={{ position: [80, 60, 80], fov: 50 }}
-          style={{ background: '#1a1a2e' }}
+          style={{ background: '#d3d3d3' }}
         >
           {/* Lighting */}
           <ambientLight intensity={0.5} />
@@ -278,19 +278,21 @@ function App() {
           )}
 
           {/* Quadrant Fires - Q1 (East), Q2 (Center), Q3 (North) */}
-          {showQuadrantFires && (
+          {showQuadrantFires && scenario && scenarioState && (
             <FireVisualization
               fireLocations={generateQuadrantFires(quadrantFireFloor, 0.8)}
               smokeAreas={[]}
             />
           )}
 
-          {/* Exit Markers */}
-          {scenario && scenarioState && (
-            <ExitMarkers
-              availableExits={scenarioState.availableExits || []}
-            />
-          )}
+          {/* Exit Markers - Always visible */}
+          <ExitMarkers
+            availableExits={
+              scenario && scenarioState
+                ? scenarioState.availableExits || []
+                : ['exit-6-east', 'exit-6-west', 'exit-6-south'] // Default exits for floor 6
+            }
+          />
 
           {/* Camera rotation tracker for compass */}
           <CameraRotationTracker onRotationChange={setCameraRotation} />

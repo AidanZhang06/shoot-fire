@@ -203,7 +203,7 @@ export function ScenarioPanel({
       background: 'linear-gradient(180deg, #1a1a1a 0%, #151515 100%)',
       color: '#ffffff',
       padding: '24px',
-      overflowY: 'auto',
+      overflowY: 'hidden',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
       boxSizing: 'border-box',
       borderLeft: '3px solid #ff6b35',
@@ -234,7 +234,7 @@ export function ScenarioPanel({
           textShadow: '0 2px 4px rgba(255, 107, 53, 0.3)',
           letterSpacing: '0.5px'
         }}>
-          🔥 Fire Escape Trainer
+          Fire Escape Educator
         </h1>
         <button
           onClick={() => onToggleFirstPerson?.(!firstPersonMode)}

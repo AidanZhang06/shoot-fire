@@ -65,8 +65,8 @@ export function FireVisualization({ fireLocations, smokeAreas = [] }: FireVisual
                   ref={(el) => {
                     if (el) fireRefs.current[index] = el;
                   }}
-                  args={[5 * fire.intensity, 16, 16]}
-                  position={[0, 3, 0]}
+                  args={[12 * fire.intensity, 16, 16]}
+                  position={[0, 6, 0]}
                 >
                   <meshStandardMaterial
                     color="#555555"
@@ -74,11 +74,11 @@ export function FireVisualization({ fireLocations, smokeAreas = [] }: FireVisual
                     opacity={0.5 * fire.intensity}
                   />
                 </Sphere>
-                
+
                 {/* Rising smoke column */}
                 <Sphere
-                  args={[4 * fire.intensity, 12, 12]}
-                  position={[0, 6, 0]}
+                  args={[10 * fire.intensity, 12, 12]}
+                  position={[0, 12, 0]}
                 >
                   <meshStandardMaterial
                     color="#777777"
@@ -86,10 +86,10 @@ export function FireVisualization({ fireLocations, smokeAreas = [] }: FireVisual
                     opacity={0.4 * fire.intensity}
                   />
                 </Sphere>
-                
+
                 <Sphere
-                  args={[3 * fire.intensity, 10, 10]}
-                  position={[0, 9, 0]}
+                  args={[8 * fire.intensity, 10, 10]}
+                  position={[0, 18, 0]}
                 >
                   <meshStandardMaterial
                     color="#999999"
@@ -106,8 +106,8 @@ export function FireVisualization({ fireLocations, smokeAreas = [] }: FireVisual
                   ref={(el) => {
                     if (el) fireRefs.current[index] = el;
                   }}
-                  args={[2 * fire.intensity, 16, 16]}
-                  position={[0, 1, 0]}
+                  args={[5 * fire.intensity, 16, 16]}
+                  position={[0, 2.5, 0]}
                 >
                   <meshStandardMaterial
                     color="#ff2200"
@@ -120,8 +120,8 @@ export function FireVisualization({ fireLocations, smokeAreas = [] }: FireVisual
 
                 {/* Inner bright core */}
                 <Sphere
-                  args={[1 * fire.intensity, 12, 12]}
-                  position={[0, 1.5, 0]}
+                  args={[3 * fire.intensity, 12, 12]}
+                  position={[0, 3, 0]}
                 >
                   <meshStandardMaterial
                     color="#ffaa00"
@@ -136,11 +136,11 @@ export function FireVisualization({ fireLocations, smokeAreas = [] }: FireVisual
                 {[...Array(8)].map((_, i) => (
                   <Sphere
                     key={`spark-${i}`}
-                    args={[0.15, 6, 6]}
+                    args={[0.4, 6, 6]}
                     position={[
-                      Math.sin(i * 0.8) * fire.intensity,
-                      1 + Math.cos(i * 0.5) * fire.intensity,
-                      Math.cos(i * 0.8) * fire.intensity
+                      Math.sin(i * 0.8) * fire.intensity * 2,
+                      2 + Math.cos(i * 0.5) * fire.intensity * 2,
+                      Math.cos(i * 0.8) * fire.intensity * 2
                     ]}
                   >
                     <meshStandardMaterial
@@ -153,8 +153,8 @@ export function FireVisualization({ fireLocations, smokeAreas = [] }: FireVisual
 
                 {/* Smoke rising from fire */}
                 <Sphere
-                  args={[3 * fire.intensity, 12, 12]}
-                  position={[0, 4, 0]}
+                  args={[7 * fire.intensity, 12, 12]}
+                  position={[0, 8, 0]}
                 >
                   <meshStandardMaterial
                     color="#333333"
@@ -166,8 +166,8 @@ export function FireVisualization({ fireLocations, smokeAreas = [] }: FireVisual
                 {/* Point light for illumination */}
                 <pointLight
                   color="#ff4400"
-                  intensity={fire.intensity * 5}
-                  distance={15}
+                  intensity={fire.intensity * 10}
+                  distance={30}
                   decay={2}
                 />
               </>
