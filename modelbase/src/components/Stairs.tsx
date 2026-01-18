@@ -3,20 +3,24 @@ import { Box, Text } from '@react-three/drei';
 
 interface StairsProps {
   position: [number, number, number];
-  floorFrom: number;
-  floorTo: number;
-  direction: 'up' | 'down';
+  floorFrom?: number;
+  floorTo?: number;
+  direction: 'up' | 'down' | 'east' | 'west' | 'north' | 'south';
   label?: string;
   width?: number;
+  isExit?: boolean; // If true, stairs also function as an exit (e.g., ground floor stairs)
 }
 
-export function Stairs({ position, floorFrom, floorTo, direction, label, width = 2.5 }: StairsProps) {
+export function Stairs({ position, floorFrom, floorTo, direction, label, width = 2.5, isExit = false }: StairsProps) {
   const floorHeight = 3.5;
   const stairsDepth = 4;
   const numSteps = 20;
   const stepHeight = floorHeight / numSteps;
   const stepDepth = stairsDepth / numSteps;
   const stepWidth = width;
+  
+  // Determine if stairs go up or down for rendering
+  const verticalDirection: 'up' | 'down' = (direction === 'down' || direction === 'south' || direction === 'west') ? 'down' : 'up';
 
   return (
     <group position={position}>
@@ -37,7 +41,7 @@ export function Stairs({ position, floorFrom, floorTo, direction, label, width =
       {/* Individual steps - more visible */}
       {Array.from({ length: numSteps }).map((_, i) => {
         const stepY = i * stepHeight;
-        const stepZ = direction === 'up' 
+        const stepZ = verticalDirection === 'up' 
           ? -stairsDepth / 2 + i * stepDepth
           : stairsDepth / 2 - i * stepDepth;
 
@@ -57,7 +61,7 @@ export function Stairs({ position, floorFrom, floorTo, direction, label, width =
             {/* Step riser - more prominent */}
             <Box
               args={[stepWidth, stepHeight * 0.3, 0.15]}
-              position={[0, stepY + stepHeight * 0.85, stepZ + (direction === 'up' ? stepDepth / 2 : -stepDepth / 2)]}
+              position={[0, stepY + stepHeight * 0.85, stepZ + (verticalDirection === 'up' ? stepDepth / 2 : -stepDepth / 2)]}
             >
               <meshStandardMaterial
                 color="#909090"
@@ -111,27 +115,29 @@ export function Stairs({ position, floorFrom, floorTo, direction, label, width =
         </Text>
       )}
 
-      {/* Direction arrow - glowing */}
-      <Text
-        position={[0, floorHeight / 2, direction === 'up' ? stairsDepth / 2 - 0.3 : -stairsDepth / 2 + 0.3]}
-        fontSize={0.6}
-        color="#00ff00"
-        anchorX="center"
-        anchorY="middle"
-        outlineWidth={0.02}
-        outlineColor="#000000"
-      >
-        {direction === 'up' ? '↑' : '↓'}
-      </Text>
+      {/* Direction arrow - glowing (only if not an exit) */}
+      {!isExit && (
+        <Text
+          position={[0, floorHeight / 2, verticalDirection === 'up' ? stairsDepth / 2 - 0.3 : -stairsDepth / 2 + 0.3]}
+          fontSize={0.6}
+          color="#00ff00"
+          anchorX="center"
+          anchorY="middle"
+          outlineWidth={0.02}
+          outlineColor="#000000"
+        >
+          {verticalDirection === 'up' ? '↑' : '↓'}
+        </Text>
+      )}
 
-      {/* Stairwell sign */}
+      {/* Stairwell sign - shows EXIT if isExit is true */}
       <Box
         args={[stepWidth * 0.8, 0.3, 0.1]}
         position={[0, floorHeight + 0.5, 0]}
       >
         <meshStandardMaterial
-          color="#ffff00"
-          emissive="#ffff00"
+          color={isExit ? "#ff0000" : "#ffff00"}
+          emissive={isExit ? "#ff0000" : "#ffff00"}
           emissiveIntensity={0.5}
         />
       </Box>
@@ -142,8 +148,38 @@ export function Stairs({ position, floorFrom, floorTo, direction, label, width =
         anchorX="center"
         anchorY="middle"
       >
-        STAIRS
+        {isExit ? 'EXIT' : 'STAIRS'}
       </Text>
+      
+      {/* Exit indicator if stairs are also an exit */}
+      {isExit && (
+        <>
+          <Text
+            position={[0, floorHeight / 2, verticalDirection === 'up' ? stairsDepth / 2 - 0.3 : -stairsDepth / 2 + 0.3]}
+            fontSize={0.8}
+            color="#ff0000"
+            anchorX="center"
+            anchorY="middle"
+            outlineWidth={0.02}
+            outlineColor="#000000"
+          >
+            EXIT
+          </Text>
+          {/* Exit glow effect */}
+          <Box
+            args={[stepWidth * 1.2, floorHeight * 0.3, 0.5]}
+            position={[0, floorHeight / 2, verticalDirection === 'up' ? stairsDepth / 2 : -stairsDepth / 2]}
+          >
+            <meshStandardMaterial
+              color="#ff0000"
+              transparent
+              opacity={0.2}
+              emissive="#ff0000"
+              emissiveIntensity={0.3}
+            />
+          </Box>
+        </>
+      )}
     </group>
   );
 }

@@ -197,41 +197,68 @@ export function ScenarioPanel({
   return (
     <div style={{
       width: '25%',
-      minWidth: '300px',
-      maxWidth: '350px',
+      minWidth: '320px',
+      maxWidth: '380px',
       height: '100vh',
-      backgroundColor: '#1a1a1a',
+      background: 'linear-gradient(180deg, #1a1a1a 0%, #151515 100%)',
       color: '#ffffff',
-      padding: '20px',
+      padding: '24px',
       overflowY: 'auto',
-      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
       boxSizing: 'border-box',
-      borderLeft: '2px solid #333',
+      borderLeft: '3px solid #ff6b35',
       display: 'flex',
-      flexDirection: 'column'
+      flexDirection: 'column',
+      boxShadow: '-4px 0 20px rgba(0, 0, 0, 0.5)'
     }}>
       {/* Header */}
       <div style={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center', 
-        marginBottom: '20px',
-        borderBottom: '2px solid #ff6b35',
-        paddingBottom: '12px'
+        marginBottom: '24px',
+        borderBottom: '3px solid #ff6b35',
+        paddingBottom: '16px',
+        background: 'linear-gradient(90deg, rgba(255, 107, 53, 0.1) 0%, transparent 100%)',
+        padding: '12px 16px',
+        marginLeft: '-24px',
+        marginRight: '-24px',
+        marginTop: '-24px',
+        borderRadius: '0 0 8px 8px'
       }}>
-        <h1 style={{ margin: 0, fontSize: '20px', color: '#ff6b35' }}>
-          🔥 Fire Escape
+        <h1 style={{ 
+          margin: 0, 
+          fontSize: '24px', 
+          color: '#ff6b35',
+          fontWeight: 700,
+          textShadow: '0 2px 4px rgba(255, 107, 53, 0.3)',
+          letterSpacing: '0.5px'
+        }}>
+          🔥 Fire Escape Trainer
         </h1>
         <button
           onClick={() => onToggleFirstPerson?.(!firstPersonMode)}
           style={{
-            padding: '6px 10px',
-            backgroundColor: firstPersonMode ? '#ff6b35' : '#333',
+            padding: '8px 12px',
+            background: firstPersonMode ? 'linear-gradient(135deg, #ff6b35 0%, #ff8a50 100%)' : '#333',
             color: '#fff',
-            border: 'none',
-            borderRadius: '4px',
+            border: `1px solid ${firstPersonMode ? '#ff6b35' : '#555'}`,
+            borderRadius: '6px',
             cursor: 'pointer',
-            fontSize: '12px'
+            fontSize: '12px',
+            fontWeight: 600,
+            transition: 'all 0.2s ease',
+            boxShadow: firstPersonMode ? '0 2px 8px rgba(255, 107, 53, 0.3)' : 'none'
+          }}
+          onMouseOver={(e) => {
+            if (!firstPersonMode) {
+              e.currentTarget.style.background = '#444';
+            }
+          }}
+          onMouseOut={(e) => {
+            if (!firstPersonMode) {
+              e.currentTarget.style.background = '#333';
+            }
           }}
         >
           {firstPersonMode ? '👁️ 1st Person' : '🎥 3rd Person'}
@@ -241,29 +268,73 @@ export function ScenarioPanel({
       {/* Scenario Selection */}
       {!activeScenario && (
         <div>
-          <p style={{ color: '#888', marginBottom: '15px', fontSize: '14px' }}>
-            Choose a difficulty:
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {['easy', 'medium', 'hard'].map((diff) => (
-              <button
-                key={diff}
-                onClick={() => generateScenario(diff as 'easy' | 'medium' | 'hard')}
-                disabled={loading}
-                style={{
-                  padding: '12px',
-                  backgroundColor: '#2a2a2a',
-                  color: diff === 'easy' ? '#8eff8e' : diff === 'medium' ? '#ffd78e' : '#ff8e8e',
-                  border: `2px solid ${diff === 'easy' ? '#4a9c4a' : diff === 'medium' ? '#9c8a4a' : '#9c4a4a'}`,
-                  borderRadius: '8px',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 'bold'
-                }}
-              >
-                {diff === 'easy' ? '🟢 Easy' : diff === 'medium' ? '🟡 Medium' : '🔴 Hard'}
-              </button>
-            ))}
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(255, 107, 53, 0.1) 0%, rgba(255, 107, 53, 0.05) 100%)',
+            padding: '16px',
+            borderRadius: '12px',
+            marginBottom: '20px',
+            border: '1px solid rgba(255, 107, 53, 0.2)'
+          }}>
+            <p style={{ 
+              color: '#e0e0e0', 
+              marginBottom: '20px', 
+              fontSize: '16px',
+              fontWeight: 600,
+              textAlign: 'center'
+            }}>
+              Select Difficulty Level
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {['easy', 'medium', 'hard'].map((diff) => {
+                const colors = {
+                  easy: { bg: 'rgba(138, 255, 138, 0.1)', border: '#4a9c4a', text: '#8eff8e', hover: 'rgba(138, 255, 138, 0.2)' },
+                  medium: { bg: 'rgba(255, 215, 142, 0.1)', border: '#9c8a4a', text: '#ffd78e', hover: 'rgba(255, 215, 142, 0.2)' },
+                  hard: { bg: 'rgba(255, 142, 142, 0.1)', border: '#9c4a4a', text: '#ff8e8e', hover: 'rgba(255, 142, 142, 0.2)' }
+                };
+                const color = colors[diff as keyof typeof colors];
+                
+                return (
+                  <button
+                    key={diff}
+                    onClick={() => generateScenario(diff as 'easy' | 'medium' | 'hard')}
+                    disabled={loading}
+                    style={{
+                      padding: '16px 20px',
+                      background: color.bg,
+                      color: color.text,
+                      border: `2px solid ${color.border}`,
+                      borderRadius: '10px',
+                      cursor: loading ? 'not-allowed' : 'pointer',
+                      fontSize: '15px',
+                      fontWeight: 600,
+                      transition: 'all 0.2s ease',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+                      opacity: loading ? 0.5 : 1
+                    }}
+                    onMouseOver={(e) => {
+                      if (!loading) {
+                        e.currentTarget.style.background = color.hover;
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.4)';
+                      }
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.background = color.bg;
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.3)';
+                    }}
+                  >
+                    <span style={{ fontSize: '18px', marginRight: '8px' }}>
+                      {diff === 'easy' ? '🟢' : diff === 'medium' ? '🟡' : '🔴'}
+                    </span>
+                    {diff.charAt(0).toUpperCase() + diff.slice(1)}
+                    <span style={{ fontSize: '12px', marginLeft: '8px', opacity: 0.7 }}>
+                      {diff === 'easy' ? '• 1 fire • Multiple exits' : diff === 'medium' ? '• 2 fires • Some smoke' : '• 3+ fires • Heavy smoke'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
@@ -273,25 +344,34 @@ export function ScenarioPanel({
         <>
           {/* Goal */}
           <div style={{
-            backgroundColor: '#1a3a1a',
-            padding: '10px',
-            borderRadius: '6px',
-            marginBottom: '15px',
-            border: '1px solid #4a9c4a'
+            background: 'linear-gradient(135deg, rgba(138, 255, 138, 0.15) 0%, rgba(74, 156, 74, 0.1) 100%)',
+            padding: '14px 16px',
+            borderRadius: '10px',
+            marginBottom: '20px',
+            border: '2px solid #4a9c4a',
+            boxShadow: '0 2px 8px rgba(74, 156, 74, 0.2)'
           }}>
-            <span style={{ color: '#8eff8e', fontSize: '13px' }}>
-              🎯 Escape the building safely
+            <span style={{ color: '#8eff8e', fontSize: '14px', fontWeight: 600 }}>
+              🎯 Mission: Escape the building safely
             </span>
           </div>
 
           {/* Situation */}
           <div style={{
-            backgroundColor: '#252525',
-            padding: '15px',
-            borderRadius: '8px',
-            marginBottom: '15px'
+            background: 'linear-gradient(135deg, rgba(255, 107, 53, 0.08) 0%, rgba(37, 37, 37, 0.95) 100%)',
+            padding: '18px',
+            borderRadius: '10px',
+            marginBottom: '18px',
+            border: '1px solid rgba(255, 107, 53, 0.2)',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
           }}>
-            <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6', color: '#e0e0e0' }}>
+            <p style={{ 
+              margin: 0, 
+              fontSize: '15px', 
+              lineHeight: '1.7', 
+              color: '#e8e8e8',
+              fontWeight: 400
+            }}>
               {currentSituation}
             </p>
           </div>

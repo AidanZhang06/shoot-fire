@@ -1,4 +1,6 @@
 import React from 'react';
+import { useThree, useFrame } from '@react-three/fiber';
+import * as THREE from 'three';
 
 interface CompassLegendProps {
   rotation?: number; // Camera rotation in degrees
@@ -104,6 +106,3 @@ export function CameraRotationTracker({ onRotationChange }: { onRotationChange: 
   return null;
 }
 
-// Need imports for CameraRotationTracker
-import { useThree, useFrame } from '@react-three/fiber';
-import * as THREE from 'three';

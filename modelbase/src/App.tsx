@@ -18,6 +18,7 @@ import { FireScenario } from './ai/types';
 import { ScenarioState } from './scenario/types';
 import { ParsedScenario } from './utils/ScenarioParser';
 import { CompassLegend, CameraRotationTracker } from './components/CompassLegend';
+import { generateQuadrantFires } from './utils/quadrantFires';
 
 // Building data for navigation
 const mockBuildingLevels = [
@@ -48,6 +49,8 @@ function App() {
   const [currentStep, setCurrentStep] = useState(0);
   const [parsedScenario, setParsedScenario] = useState<ParsedScenario | null>(null);
   const [cameraRotation, setCameraRotation] = useState(0);
+  const [showQuadrantFires, setShowQuadrantFires] = useState(true); // Toggle for quadrant fires
+  const [quadrantFireFloor, setQuadrantFireFloor] = useState(5); // Floor to show quadrant fires on
 
   // Initialize navigation graph
   useEffect(() => {
@@ -92,11 +95,21 @@ function App() {
         currentTime: Date.now(),
         playerPosition: POSITIONS.start,
         currentFloor: 6,
-        fireLocations: newScenario.fireLocations || [],
-        smokeAreas: newScenario.smokeAreas || [],
+        fireLocations: Array.isArray(newScenario.fireLocations)
+          ? newScenario.fireLocations.map(fire => ({
+              ...fire,
+              startTime:
+                typeof fire.startTime !== 'undefined' && fire.startTime !== null
+                  ? fire.startTime
+                  : Date.now()
+            }))
+          : [],
+        smokeAreas: Array.isArray(newScenario.smokeAreas) ? newScenario.smokeAreas : [],
         blockedNodes: [],
         blockedPaths: [],
-        availableExits: newScenario.availableExits || ['exit-6-west', 'exit-6-south'],
+        availableExits: Array.isArray(newScenario.availableExits)
+          ? newScenario.availableExits
+          : ['exit-6-west', 'exit-6-south'],
         playerPath: [],
         status: 'in_progress',
         playerHealth: 100,
@@ -221,8 +234,8 @@ function App() {
     <div style={{ display: 'flex', width: '100vw', height: '100vh' }}>
       {/* 3D Canvas - 75% width */}
       <div style={{ width: '75%', height: '100%', position: 'relative' }}>
-        {/* Compass Legend Overlay */}
-        {scenario && <CompassLegend rotation={cameraRotation} />}
+        {/* Compass Legend Overlay - always visible, rotates with camera */}
+        <CompassLegend rotation={cameraRotation} />
 
         <Canvas
           camera={{ position: [80, 60, 80], fov: 50 }}
@@ -238,11 +251,11 @@ function App() {
           <HillmanBuilding />
           <ConnectingBridges />
 
-          {/* Stairs */}
-          <Stairs position={[19, 0, 0]} direction="east" width={3} />
-          <Stairs position={[-19, 0, 0]} direction="west" width={3} />
-          <Stairs position={[-15, 0, 12]} direction="south" width={3} />
-          <Stairs position={[-15, 0, -12]} direction="north" width={3} />
+          {/* Stairs - ground floor stairs also function as exits */}
+          <Stairs position={[19, 0, 0]} direction="east" width={3} isExit={true} />
+          <Stairs position={[-19, 0, 0]} direction="west" width={3} isExit={true} />
+          <Stairs position={[-15, 0, 12]} direction="south" width={3} isExit={true} />
+          <Stairs position={[-15, 0, -12]} direction="north" width={3} isExit={true} />
 
           {/* Coordinate System (toggle) */}
           {showCoordinateAxes && <CoordinateSystem size={50} />}
@@ -264,11 +277,18 @@ function App() {
             />
           )}
 
+          {/* Quadrant Fires - Q1 (East), Q2 (Center), Q3 (North) */}
+          {showQuadrantFires && (
+            <FireVisualization
+              fireLocations={generateQuadrantFires(quadrantFireFloor, 0.8)}
+              smokeAreas={[]}
+            />
+          )}
+
           {/* Exit Markers */}
           {scenario && scenarioState && (
             <ExitMarkers
               availableExits={scenarioState.availableExits || []}
-              currentFloor={scenarioState.currentFloor}
             />
           )}
 

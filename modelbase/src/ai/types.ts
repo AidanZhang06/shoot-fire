@@ -1,6 +1,7 @@
 // AI scenario generation type definitions
 
 export interface FireLocation {
+  startTime: undefined;
   position: [number, number, number]; // x, y (floor), z
   intensity: number; // 0-1, where 1 is fully engulfed
   nodeId?: string; // If mapped to a navigation node

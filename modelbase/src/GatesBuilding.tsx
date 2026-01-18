@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Box, Text } from '@react-three/drei';
+import { FloorQuadrants } from './components/FloorQuadrants';
 
 interface Room {
   x: number;
@@ -311,20 +312,61 @@ export function GatesBuilding() {
     return levels;
   }, []);
 
-  // Quadrant positions for floors 5 and 6
-  const quadrants = [
-    { label: 'Q1', position: [18, 0.5, 8], floor: 5 },      // East-North corner
-    { label: 'Q2', position: [0, 0.5, 0], floor: 5 },       // Center
-    { label: 'Q3', position: [-18, 0.5, 8], floor: 5 },     // West-North corner
-    { label: 'Q1', position: [18, 0.5, 8], floor: 6 },      // East-North corner
-    { label: 'Q2', position: [0, 0.5, 0], floor: 6 },       // Center
-    { label: 'Q3', position: [-18, 0.5, 8], floor: 6 },     // West-North corner
-  ];
+  // Quadrant positions for all floors
+  const quadrants = useMemo(() => {
+    const result = [];
+    for (let floorNum = 1; floorNum <= 9; floorNum++) {
+      const mainWingWidth = 45 - (floorNum - 1) * 1.2;
+      const offsetX = floorNum >= 7 ? 2 + (floorNum - 6) * 0.8 : 0;
+      
+      // Q1: East-Center (same Z as Q2)
+      result.push({
+        label: 'Q1',
+        position: [-5 + mainWingWidth * 0.4 + offsetX, 0.5, 0],
+        floor: floorNum
+      });
+      
+      // Q2: Center (adjusted for offset, moved up a bit in Y)
+      result.push({
+        label: 'Q2',
+        position: [-10 + offsetX, 1, 0],
+        floor: floorNum
+      });
+      
+      // Q3: West-North corner (adjusted for floor width and offset, moved +3 in Z)
+      result.push({
+        label: 'Q3',
+        position: [+5 + -mainWingWidth * 0.4 + offsetX, 0.5, 15],
+        floor: floorNum
+      });
+    }
+    return result;
+  }, []);
+
+  // Generate invisible quadrant configs for all floors
+  const quadrantConfigs = useMemo(() => {
+    return building.map((level) => ({
+      floor: level.floorNumber,
+      sections: level.sections.map((section) => ({
+        x: section.x,
+        z: section.z,
+        width: section.width,
+        depth: section.depth,
+      })),
+    }));
+  }, [building]);
 
   return (
     <group position={[0, 0, 0]}>
-      {/* Quadrant labels */}
-      {quadrants.map((quadrant, idx) => (
+      {/* Invisible quadrant dividers for all floors */}
+      <FloorQuadrants
+        quadrants={quadrantConfigs}
+        floorHeight={floorHeight}
+        opacity={0.0}
+        color="#00ff00"
+      />
+      {/* Quadrant labels - made invisible but keeping for reference */}
+      {false && quadrants.map((quadrant, idx) => (
         <Text
           key={`quadrant-${idx}`}
           position={[quadrant.position[0], quadrant.floor * floorHeight + quadrant.position[1], quadrant.position[2]]}
