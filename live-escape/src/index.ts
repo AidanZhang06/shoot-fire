@@ -8,12 +8,23 @@ import express from 'express';
 import { Server } from 'socket.io';
 import { createServer } from 'http';
 import path from 'path';
+import fs from 'fs';
 import { EmergencyVideoProcessor } from './server/overshoot-integration';
 import { EnrichedVideoAnalysisResult } from './types/schemas';
 import { EvacuationOrchestrator } from './services/orchestrator';
 import { MockDataProvider } from './mocks/mock-data-provider';
 
 const app = express();
+
+// Parse JSON bodies
+app.use(express.json());
+
+// Observations directory
+const OBSERVATIONS_DIR = path.join(__dirname, '../observations');
+if (!fs.existsSync(OBSERVATIONS_DIR)) {
+  fs.mkdirSync(OBSERVATIONS_DIR, { recursive: true });
+  console.log('[Server] Created observations directory');
+}
 
 // Serve static files from public directory
 app.use(express.static(path.join(__dirname, '../public')));
@@ -244,6 +255,98 @@ app.get('/stats', (req, res) => {
 
 app.get('/orchestrator-stats', (req, res) => {
   res.json(orchestrator.getMetrics());
+});
+
+// Observation storage endpoints (from locationDetector)
+app.post('/save_observation', (req, res) => {
+  try {
+    const { device_id, timestamp, gps_latitude, gps_longitude, gps_accuracy, metadata } = req.body;
+
+    if (!device_id) {
+      return res.status(400).json({ error: 'device_id is required' });
+    }
+
+    const deviceFile = path.join(OBSERVATIONS_DIR, `observations_${device_id}.json`);
+
+    // Read existing observations or create new array
+    let observations: any[] = [];
+    if (fs.existsSync(deviceFile)) {
+      const fileContent = fs.readFileSync(deviceFile, 'utf-8');
+      observations = JSON.parse(fileContent);
+    }
+
+    // Append new observation
+    observations.push({ device_id, timestamp, gps_latitude, gps_longitude, gps_accuracy, metadata });
+
+    // Write back to file
+    fs.writeFileSync(deviceFile, JSON.stringify(observations, null, 2));
+
+    console.log(`[Observation] Saved for device ${device_id} (total: ${observations.length})`);
+
+    res.json({
+      status: 'success',
+      device_id,
+      total_observations: observations.length
+    });
+  } catch (error: any) {
+    console.error('[Observation] Error saving:', error);
+    res.status(500).json({ error: 'Failed to save observation', details: error.message });
+  }
+});
+
+app.get('/observations/:device_id', (req, res) => {
+  try {
+    const { device_id } = req.params;
+    const deviceFile = path.join(OBSERVATIONS_DIR, `observations_${device_id}.json`);
+
+    if (!fs.existsSync(deviceFile)) {
+      return res.json({ device_id, observations: [], count: 0 });
+    }
+
+    const fileContent = fs.readFileSync(deviceFile, 'utf-8');
+    const observations = JSON.parse(fileContent);
+
+    res.json({ device_id, observations, count: observations.length });
+  } catch (error: any) {
+    console.error('[Observation] Error getting:', error);
+    res.status(500).json({ error: 'Failed to get observations', details: error.message });
+  }
+});
+
+app.get('/devices', (req, res) => {
+  try {
+    const devices: any[] = [];
+    const files = fs.readdirSync(OBSERVATIONS_DIR);
+
+    files.forEach(fileName => {
+      if (fileName.startsWith('observations_') && fileName.endsWith('.json')) {
+        const device_id = fileName.replace('observations_', '').replace('.json', '');
+        const filePath = path.join(OBSERVATIONS_DIR, fileName);
+        const fileContent = fs.readFileSync(filePath, 'utf-8');
+        const observations = JSON.parse(fileContent);
+
+        if (observations.length > 0) {
+          const latest = observations[observations.length - 1];
+          devices.push({
+            device_id,
+            observation_count: observations.length,
+            latest_gps: {
+              latitude: latest.gps_latitude,
+              longitude: latest.gps_longitude,
+              accuracy: latest.gps_accuracy,
+              timestamp: latest.timestamp
+            }
+          });
+        }
+      }
+    });
+
+    console.log(`[Devices] Listed ${devices.length} active devices`);
+    res.json({ devices, count: devices.length });
+  } catch (error: any) {
+    console.error('[Devices] Error listing:', error);
+    res.status(500).json({ error: 'Failed to list devices', details: error.message });
+  }
 });
 
 // Graceful shutdown

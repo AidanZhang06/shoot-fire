@@ -1,0 +1,13 @@
+[
+  {
+    "device_id": "test_device_123",
+    "timestamp": "2026-01-18T06:00:00.000Z",
+    "gps_latitude": 37.7749,
+    "gps_longitude": -122.4194,
+    "gps_accuracy": 15.5,
+    "metadata": {
+      "scene_type": "hallway",
+      "test": true
+    }
+  }
+]

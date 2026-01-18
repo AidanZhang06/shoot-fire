@@ -492,7 +492,42 @@
 
                         </div>
 
-                        <!-- Real-Time Analysis Overlay (Top-left) -->
+                        <!-- GPS & Metadata Display (Top-left) -->
+                        <div id="metadata-overlay" style="position: absolute; top: 16px; left: 16px; max-width: 380px; pointer-events: auto;">
+                            <div style="background: rgba(255, 255, 255, 0.98); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; box-shadow: var(--shadow-md); backdrop-filter: blur(12px);">
+                                <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--text-primary);">📡 Device Status</h3>
+
+                                <!-- Device ID -->
+                                <div style="margin-bottom: 12px; padding: 8px; background: #f0f9ff; border-radius: 6px;">
+                                    <div style="font-size: 11px; color: #64748b; margin-bottom: 2px;">Device ID</div>
+                                    <div id="display-device-id" style="font-size: 12px; font-weight: 600; color: #0369a1; font-family: monospace;">Loading...</div>
+                                </div>
+
+                                <!-- GPS Section -->
+                                <div style="margin-bottom: 12px; padding: 8px; background: #f0fdf4; border-radius: 6px;">
+                                    <div style="font-size: 11px; color: #64748b; margin-bottom: 4px;">📍 GPS Location</div>
+                                    <div id="display-gps-coords" style="font-size: 12px; font-weight: 600; color: #15803d; font-family: monospace; margin-bottom: 2px;">Waiting for GPS...</div>
+                                    <div id="display-gps-accuracy" style="font-size: 11px; color: #4ade80;">Accuracy: --</div>
+                                </div>
+
+                                <!-- Observation Count -->
+                                <div style="margin-bottom: 12px; padding: 8px; background: #fef3c7; border-radius: 6px;">
+                                    <div style="font-size: 11px; color: #64748b; margin-bottom: 2px;">💾 Observations Saved</div>
+                                    <div id="display-obs-count" style="font-size: 18px; font-weight: 700; color: #ca8a04;">0</div>
+                                </div>
+
+                                <!-- Metadata Section -->
+                                <div style="padding: 8px; background: #faf5ff; border-radius: 6px;">
+                                    <div style="font-size: 11px; color: #64748b; margin-bottom: 6px;">🔍 Indoor Metadata</div>
+                                    <div id="display-scene-type" style="font-size: 12px; color: #7c3aed; margin-bottom: 4px;"><strong>Scene:</strong> --</div>
+                                    <div id="display-text-detected" style="font-size: 11px; color: #7c3aed; margin-bottom: 4px;"><strong>Text:</strong> None</div>
+                                    <div id="display-landmarks" style="font-size: 11px; color: #7c3aed; margin-bottom: 4px;"><strong>Landmarks:</strong> None</div>
+                                    <div id="display-lighting" style="font-size: 11px; color: #7c3aed;"><strong>Lighting:</strong> --</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Real-Time Analysis Overlay (Top-right) -->
                         <div id="analysis-overlay" style="position: absolute; top: 16px; right: 16px; max-width: 320px; pointer-events: auto;">
                             <div id="analysis-results" style="background: rgba(255, 255, 255, 0.98); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: var(--spacing-sm); box-shadow: var(--shadow-md); backdrop-filter: blur(12px);">
                                 <div class="flex flex-col items-center justify-center" style="padding: var(--spacing-md) 0; text-align: center;">
@@ -687,13 +722,35 @@
 
         // Configuration
         const SERVER_URL = window.location.origin;
-        const USER_ID = 'user-' + Date.now();
+
+        // Generate unique device ID (or get from localStorage)
+        let deviceId = localStorage.getItem('device_id');
+        if (!deviceId) {
+            deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('device_id', deviceId);
+            console.log('🆔 Generated new device ID:', deviceId);
+        } else {
+            console.log('🆔 Using existing device ID:', deviceId);
+        }
+        const USER_ID = deviceId;
+
+        // Display device ID on screen
+        setTimeout(() => {
+            const displayDeviceId = document.getElementById('display-device-id');
+            if (displayDeviceId) {
+                displayDeviceId.textContent = deviceId.substring(0, 25) + '...';
+            }
+        }, 100);
 
         // State
         let socket = null;
         let visionSession = null;
         let mediaStream = null;
         let resultCount = 0;
+
+        // GPS State
+        let gpsWatchId = null;
+        let currentGpsData = null;
 
         // Guidance overlay state
         let guidanceActive = false;
@@ -709,6 +766,82 @@
 
         // 3D Map Viewer (initialized automatically on page load via module script above)
 
+        // GPS Tracking Functions
+        function startGPSTracking() {
+            console.log('📍 Starting GPS tracking...');
+
+            if (!navigator.geolocation) {
+                console.error('❌ Geolocation API not available');
+                const displayCoords = document.getElementById('display-gps-coords');
+                if (displayCoords) {
+                    displayCoords.textContent = 'GPS not supported';
+                    displayCoords.style.color = '#dc2626';
+                }
+                return;
+            }
+
+            const gpsOptions = {
+                enableHighAccuracy: true,
+                timeout: 15000,
+                maximumAge: 0  // Always get fresh position
+            };
+
+            gpsWatchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    const lat = parseFloat(position.coords.latitude.toFixed(8));
+                    const lon = parseFloat(position.coords.longitude.toFixed(8));
+                    const acc = parseFloat(position.coords.accuracy.toFixed(1));
+
+                    currentGpsData = {
+                        latitude: lat,
+                        longitude: lon,
+                        accuracy: acc,
+                        timestamp: new Date().toISOString()
+                    };
+
+                    console.log(`📍 GPS UPDATE: (${lat}, ${lon}) ±${acc}m`);
+
+                    // Update display on screen
+                    const displayCoords = document.getElementById('display-gps-coords');
+                    const displayAccuracy = document.getElementById('display-gps-accuracy');
+                    if (displayCoords) {
+                        displayCoords.textContent = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+                        displayCoords.style.color = '#15803d';
+                    }
+                    if (displayAccuracy) {
+                        displayAccuracy.textContent = `Accuracy: ±${acc}m`;
+                    }
+
+                    // Update user position in 3D map based on GPS
+                    if (window.userPosition) {
+                        window.userPosition.x = (lat * 1000000) % 50;
+                        window.userPosition.z = (lon * 1000000) % 50;
+                    }
+                },
+                (error) => {
+                    console.error('❌ GPS ERROR:', error.code, error.message);
+                    currentGpsData = null;
+                    const displayCoords = document.getElementById('display-gps-coords');
+                    if (displayCoords) {
+                        displayCoords.textContent = `GPS Error: ${error.message}`;
+                        displayCoords.style.color = '#dc2626';
+                    }
+                },
+                gpsOptions
+            );
+
+            console.log('✅ GPS watch started with ID:', gpsWatchId);
+        }
+
+        function stopGPSTracking() {
+            if (gpsWatchId !== null) {
+                navigator.geolocation.clearWatch(gpsWatchId);
+                gpsWatchId = null;
+                currentGpsData = null;
+                console.log('🛑 GPS tracking stopped');
+            }
+        }
+
         // Initialize Socket.IO
         function initSocket() {
             socket = io(SERVER_URL);
@@ -720,11 +853,14 @@
                     userId: USER_ID,
                     position: { x: 0, y: 0, z: 0 }
                 });
+                // Start GPS tracking when connected
+                startGPSTracking();
             });
 
             socket.on('disconnect', () => {
                 console.log('❌ Disconnected from server');
                 updateConnectionStatus(false);
+                stopGPSTracking();
             });
 
             socket.on('processing-error', (error) => {
@@ -1108,9 +1244,16 @@
         }
 
         window.startCamera = async function() {
+            console.log('🎥 ========== START CAMERA CLICKED ==========');
+            console.log('Device ID:', deviceId);
+            console.log('User ID:', USER_ID);
+            console.log('Current GPS Data:', currentGpsData);
+
             const startBtn = document.getElementById('start-btn');
             const stopBtn = document.getElementById('stop-btn');
             const videoElement = document.getElementById('video');
+
+            console.log('Video element found:', !!videoElement);
 
             try {
                 startBtn.disabled = true;
@@ -1175,27 +1318,65 @@
                 }
 
                 console.log('🔧 Initializing Overshoot...');
+
+                // Use the video element we already have
+                console.log('Video element:', videoElement);
+                if (!videoElement) {
+                    throw new Error('Video element not found');
+                }
+
                 visionSession = new RealtimeVision({
                     apiUrl: 'https://cluster1.overshoot.ai/api/v0.2',
                     apiKey: 'ovs_4488f728fc52c4d2ca6f8972c7cc53e3',
-                    prompt: `Analyze this emergency evacuation video frame and identify:
+                    prompt: `You are a visual perception system for indoor navigation. Your ONLY job is to extract structured observations from the live video feed.
 
-1. OBSTACLES: Any physical blockages in the path (debris, furniture, locked doors)
-2. HAZARDS:
-   - Fire: location and intensity on scale 1-5, growth rate (stable/growing/rapid)
-   - Smoke: density on scale 1-5, height from floor, visibility level
-   - Water: flooding depth and flow rate
-3. PEOPLE: Count of visible people and their approximate positions (left/center/right, near/far), density level, movement direction
-4. EXITS: Any visible exit signs or doors, their status (clear/blocked/partially_blocked), approximate direction in degrees from center (0=straight ahead)
+CRITICAL RULES:
+1. DO NOT infer the user's location or position in a building
+2. DO NOT reference or assume knowledge of floor plans
+3. ONLY describe what you directly see in the video
+4. Return observations in a structured format
 
-Respond in JSON format with this structure:
-{
-  "obstacles": [...],
-  "hazards": {"fire": {...}, "smoke": {...}, "water": {...}},
-  "people": {"count": 0, "density": "clear"},
-  "exits": [...]
-}`,
-                    onResult: handleAnalysisResult
+Extract the following information:
+
+1. **Scene Type**: Classify the environment (hallway, room, lobby, stairwell, elevator_area, corridor_intersection, entrance, unknown)
+
+2. **Text Detection**: Find ALL readable text
+   - Room numbers (e.g., "312", "Room 401")
+   - Floor indicators (e.g., "Floor 3", "3F")
+   - Directional signs (e.g., "EXIT →", "STAIRS")
+   - Safety signage
+
+3. **Landmarks**: Identify physical features
+   - Types: door, staircase, elevator, exit_sign, fire_extinguisher, room_number_plaque, elevator_button_panel, emergency_exit_door
+   - Direction: left, right, ahead
+   - Distance: near (< 2m), mid (2-5m), far (> 5m)
+
+4. **Quality Assessment**:
+   - Lighting: good, dim, poor, backlit
+   - Motion blur present: yes/no
+
+Return your observations in this format:
+Scene: [type]
+Text: [list all text with approximate confidence]
+Landmarks: [list with direction and distance]
+Lighting: [quality]
+Motion: [detected/stable]
+
+REMEMBER: You are a SENSOR, not a localizer. Extract observations, not conclusions about position.`,
+                    video: videoElement,
+                    source: {
+                        type: 'camera',
+                        cameraFacing: 'environment'
+                    },
+                    clip_length_seconds: 1.0,
+                    delay_seconds: 6.0,
+                    fps: 10,
+                    sampling_ratio: 0.2,
+                    onResult: handleAnalysisResult,
+                    onError: (error) => {
+                        console.error('❌ Overshoot error:', error);
+                        showError(`Overshoot error: ${error.message || error}`);
+                    }
                 });
 
                 console.log('▶️ Starting analysis...');
@@ -1214,8 +1395,14 @@ Respond in JSON format with this structure:
                 }
 
             } catch (error) {
-                console.error('❌ Failed to start:', error);
+                console.error('❌ ========== CAMERA START FAILED ==========');
+                console.error('Error type:', error.name);
+                console.error('Error message:', error.message);
+                console.error('Error stack:', error.stack);
+                console.error('Full error:', error);
+
                 showError(error.message);
+                updateVideoStatus('alert-circle', 'ERROR: ' + error.message, 'rgba(220, 38, 38, 0.95)', 'white');
                 startBtn.disabled = false;
 
                 if (mediaStream) {
@@ -1252,6 +1439,143 @@ Respond in JSON format with this structure:
             console.log('✅ Camera stopped');
         };
 
+        // Parse Overshoot result (locationDetector format)
+        function parseOvershootResult(result) {
+            const text = result.result || result.toString();
+
+            const parsed = {
+                scene_type: 'unknown',
+                text_detected: [],
+                landmarks: [],
+                lighting_quality: 'unknown',
+                motion_blur_detected: false,
+                raw_response: text
+            };
+
+            try {
+                // Extract scene type
+                const sceneMatch = text.match(/Scene:\s*(\w+)/i);
+                if (sceneMatch) {
+                    parsed.scene_type = sceneMatch[1].toLowerCase();
+                }
+
+                // Extract text detections
+                const textMatch = text.match(/Text:\s*(.+?)(?=\nLandmarks:|Lighting:|Motion:|$)/is);
+                if (textMatch) {
+                    const textContent = textMatch[1].trim();
+                    if (textContent !== '[]' && textContent.toLowerCase() !== 'none' && textContent.length > 0) {
+                        const cleanText = textContent.replace(/[\[\]]/g, '');
+                        const texts = cleanText.split(',').map(t => t.trim()).filter(t => t.length > 0);
+                        parsed.text_detected = texts.map(t => ({
+                            text: t,
+                            confidence: 0.8,
+                            includes_arrow: /→|←|↑|↓|->|<-/.test(t)
+                        }));
+                    }
+                }
+
+                // Extract landmarks
+                const landmarksMatch = text.match(/Landmarks:\s*(.+?)(?=\nLighting:|Motion:|$)/is);
+                if (landmarksMatch) {
+                    const cleanLandmarks = landmarksMatch[1].trim().replace(/[\[\]]/g, '').trim();
+
+                    if (cleanLandmarks.toLowerCase() !== 'none' && cleanLandmarks.length > 0) {
+                        const landmarkParts = cleanLandmarks.split(',').map(l => l.trim());
+                        let currentLandmark = null;
+
+                        for (const part of landmarkParts) {
+                            if (part.includes(':')) {
+                                if (currentLandmark) parsed.landmarks.push(currentLandmark);
+                                const [type, firstAttr] = part.split(':').map(s => s.trim());
+                                currentLandmark = {
+                                    type: type.toLowerCase(),
+                                    direction: 'ahead',
+                                    distance: 'mid',
+                                    confidence: 0.75
+                                };
+                                if (firstAttr && ['left', 'right', 'ahead', 'behind'].includes(firstAttr.toLowerCase())) {
+                                    currentLandmark.direction = firstAttr.toLowerCase();
+                                }
+                            } else if (currentLandmark) {
+                                const attr = part.toLowerCase().trim();
+                                if (['left', 'right', 'ahead', 'behind'].includes(attr)) {
+                                    currentLandmark.direction = attr;
+                                } else if (['near', 'mid', 'far'].includes(attr)) {
+                                    currentLandmark.distance = attr;
+                                }
+                            }
+                        }
+                        if (currentLandmark) parsed.landmarks.push(currentLandmark);
+                    }
+                }
+
+                // Extract lighting
+                const lightingMatch = text.match(/Lighting:\s*(\w+)/i);
+                if (lightingMatch) {
+                    parsed.lighting_quality = lightingMatch[1].toLowerCase();
+                }
+
+                // Extract motion
+                const motionMatch = text.match(/Motion:\s*(\w+)/i);
+                if (motionMatch) {
+                    parsed.motion_blur_detected = motionMatch[1].toLowerCase().includes('detect');
+                }
+            } catch (e) {
+                console.error('Error parsing Overshoot result:', e);
+            }
+
+            return parsed;
+        }
+
+        // Save observation (GPS + metadata)
+        async function saveObservation(metadata) {
+            if (!currentGpsData) {
+                console.warn('⚠️ No GPS data available, skipping observation save');
+                const displayCoords = document.getElementById('display-gps-coords');
+                if (displayCoords) {
+                    displayCoords.textContent = 'GPS not available';
+                    displayCoords.style.color = '#dc2626';
+                }
+                return;
+            }
+
+            try {
+                const observation = {
+                    device_id: deviceId,
+                    timestamp: currentGpsData.timestamp,
+                    gps_latitude: currentGpsData.latitude,
+                    gps_longitude: currentGpsData.longitude,
+                    gps_accuracy: currentGpsData.accuracy,
+                    metadata: metadata
+                };
+
+                const response = await fetch('/save_observation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(observation)
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('💾 Observation saved:', data.total_observations, 'total');
+
+                    // Update observation count display
+                    const displayObsCount = document.getElementById('display-obs-count');
+                    if (displayObsCount) {
+                        displayObsCount.textContent = data.total_observations;
+                        displayObsCount.style.animation = 'pulse 0.5s ease-in-out';
+                        setTimeout(() => {
+                            displayObsCount.style.animation = '';
+                        }, 500);
+                    }
+                } else {
+                    console.error('❌ Failed to save observation:', response.statusText);
+                }
+            } catch (error) {
+                console.error('❌ Error saving observation:', error);
+            }
+        }
+
         function handleAnalysisResult(result) {
             console.log('📊 Analysis result:', result);
             console.log('   AI Response:', result.result);
@@ -1260,27 +1584,55 @@ Respond in JSON format with this structure:
 
             resultCount++;
 
-            let analysis;
-            try {
-                // Parse the AI response
-                analysis = JSON.parse(result.result);
-            } catch (e) {
-                console.error('Parse error:', e);
-                console.log('Raw result:', result.result);
-                // If parsing fails, try to use the result as-is or create minimal structure
-                analysis = {
-                    obstacles: [],
-                    hazards: { fire: { present: false }, smoke: { present: false }, water: { present: false } },
-                    people: { count: 0, density: 'unknown' },
-                    exits: []
-                };
+            // Parse indoor localization metadata (locationDetector format)
+            const indoorMetadata = parseOvershootResult(result);
+            console.log('📍 Indoor metadata:', indoorMetadata);
+
+            // Update metadata display on screen
+            const displaySceneType = document.getElementById('display-scene-type');
+            const displayTextDetected = document.getElementById('display-text-detected');
+            const displayLandmarks = document.getElementById('display-landmarks');
+            const displayLighting = document.getElementById('display-lighting');
+
+            if (displaySceneType) {
+                displaySceneType.innerHTML = `<strong>Scene:</strong> ${indoorMetadata.scene_type}`;
             }
 
-            // Generate realistic confidence score (50-99%, skewed towards 99%)
-            // Using exponential distribution to skew towards higher values
-            const randomValue = Math.random();
-            const skewedValue = Math.pow(randomValue, 0.3); // Lower exponent = more skew towards 1
-            analysis.confidence = 0.5 + (skewedValue * 0.49); // Maps to 50-99%
+            if (displayTextDetected) {
+                const textList = indoorMetadata.text_detected.length > 0
+                    ? indoorMetadata.text_detected.map(t => t.text).join(', ')
+                    : 'None';
+                displayTextDetected.innerHTML = `<strong>Text:</strong> ${textList}`;
+            }
+
+            if (displayLandmarks) {
+                const landmarkList = indoorMetadata.landmarks.length > 0
+                    ? indoorMetadata.landmarks.map(l => `${l.type} (${l.direction}, ${l.distance})`).join(', ')
+                    : 'None';
+                displayLandmarks.innerHTML = `<strong>Landmarks:</strong> ${landmarkList}`;
+            }
+
+            if (displayLighting) {
+                displayLighting.innerHTML = `<strong>Lighting:</strong> ${indoorMetadata.lighting_quality}`;
+            }
+
+            // Save observation with GPS data
+            saveObservation(indoorMetadata);
+
+            // Map to emergency format for backward compatibility with live-escape UI
+            const analysis = {
+                scene_type: indoorMetadata.scene_type,
+                text_detected: indoorMetadata.text_detected,
+                landmarks: indoorMetadata.landmarks,
+                lighting_quality: indoorMetadata.lighting_quality,
+                motion_blur_detected: indoorMetadata.motion_blur_detected,
+                // Legacy fields for UI compatibility
+                obstacles: [],
+                hazards: { fire: { present: false }, smoke: { present: false }, water: { present: false } },
+                people: { count: 0, density: 'clear' },
+                exits: indoorMetadata.landmarks.filter(l => l.type === 'exit_sign' || l.type === 'emergency_exit_door'),
+                confidence: 0.85
+            };
 
             displayAnalysisResult(analysis, result);
 
