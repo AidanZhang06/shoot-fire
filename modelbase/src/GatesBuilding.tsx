@@ -435,7 +435,7 @@ export function GatesBuilding({ playerPosition = [0, 0, 0], renderDistance = 30 
           <group key={levelIndex} position={[level.offsetX, yPos, 0]}>
             {/* Floor label */}
             <Text
-              position={[0, floorHeight + 1.5, 30]}
+              position={[0, floorHeight - 2, 30]}
               fontSize={0.8}
               color="#00ffff"
               anchorX="center"
