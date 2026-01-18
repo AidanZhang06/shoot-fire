@@ -66,5 +66,79 @@
       "motion_blur_detected": false,
       "raw_response": "Scene: hallway\nText: []\nLandmarks: [door: right, mid, elevator: right, far, exit_sign: right, far]\nLighting: good\nMotion: stable"
     }
+  },
+  {
+    "device_id": "device_1768724212575_x0kppo9n9",
+    "timestamp": "2026-01-18T16:39:30.779Z",
+    "gps_latitude": 40.44340831,
+    "gps_longitude": -79.94466901,
+    "gps_accuracy": 35,
+    "metadata": {
+      "scene_type": "hallway",
+      "text_detected": [],
+      "landmarks": [
+        {
+          "type": "door",
+          "direction": "left",
+          "distance": "near",
+          "confidence": 0.75
+        },
+        {
+          "type": "door",
+          "direction": "right",
+          "distance": "near",
+          "confidence": 0.75
+        },
+        {
+          "type": "plant",
+          "direction": "right",
+          "distance": "mid",
+          "confidence": 0.75
+        }
+      ],
+      "lighting_quality": "good",
+      "motion_blur_detected": false,
+      "raw_response": "Scene: hallway\nText: []\nLandmarks: [door: left, near, door: right, near, plant: right, mid]\nLighting: good\nMotion: stable"
+    }
+  },
+  {
+    "device_id": "device_1768724212575_x0kppo9n9",
+    "timestamp": "2026-01-18T16:39:30.779Z",
+    "gps_latitude": 40.44340831,
+    "gps_longitude": -79.94466901,
+    "gps_accuracy": 35,
+    "metadata": {
+      "scene_type": "hallway",
+      "text_detected": [],
+      "landmarks": [
+        {
+          "type": "door",
+          "direction": "left",
+          "distance": "near",
+          "confidence": 0.75
+        },
+        {
+          "type": "door",
+          "direction": "right",
+          "distance": "near",
+          "confidence": 0.75
+        },
+        {
+          "type": "staircase",
+          "direction": "ahead",
+          "distance": "far",
+          "confidence": 0.75
+        },
+        {
+          "type": "plant",
+          "direction": "right",
+          "distance": "mid",
+          "confidence": 0.75
+        }
+      ],
+      "lighting_quality": "good",
+      "motion_blur_detected": false,
+      "raw_response": "Scene: hallway\nText: []\nLandmarks: [door: left, near, door: right, near, staircase: ahead, far, plant: right, mid]\nLighting: good\nMotion: stable"
+    }
   }
 ]

@@ -393,5 +393,508 @@
       "motion_blur_detected": false,
       "raw_response": "Scene: unknown  \nText: []  \nLandmarks: []  \nLighting: good  \nMotion: stable"
     }
+  },
+  {
+    "device_id": "device_1768749116008_fhasdev67",
+    "timestamp": "2026-01-18T16:43:19.682Z",
+    "gps_latitude": 40.4433496,
+    "gps_longitude": -79.94469193,
+    "gps_accuracy": 35,
+    "metadata": {
+      "scene_type": "unknown",
+      "text_detected": [],
+      "landmarks": [],
+      "lighting_quality": "good",
+      "motion_blur_detected": false,
+      "raw_response": "Scene: unknown  \nText: []  \nLandmarks: []  \nLighting: good  \nMotion: stable"
+    }
+  },
+  {
+    "device_id": "device_1768749116008_fhasdev67",
+    "timestamp": "2026-01-18T16:43:19.682Z",
+    "gps_latitude": 40.4433496,
+    "gps_longitude": -79.94469193,
+    "gps_accuracy": 35,
+    "metadata": {
+      "scene_type": "unknown",
+      "text_detected": [],
+      "landmarks": [],
+      "lighting_quality": "good",
+      "motion_blur_detected": false,
+      "raw_response": "Scene: unknown  \nText: []  \nLandmarks: []  \nLighting: good  \nMotion: stable"
+    }
+  },
+  {
+    "device_id": "device_1768749116008_fhasdev67",
+    "timestamp": "2026-01-18T16:44:48.994Z",
+    "gps_latitude": 40.44340972,
+    "gps_longitude": -79.94469447,
+    "gps_accuracy": 35,
+    "metadata": {
+      "scene_type": "hallway",
+      "text_detected": [],
+      "landmarks": [
+        {
+          "type": "door",
+          "direction": "right",
+          "distance": "mid",
+          "confidence": 0.75
+        },
+        {
+          "type": "fire_extinguisher",
+          "direction": "right",
+          "distance": "near",
+          "confidence": 0.75
+        },
+        {
+          "type": "exit_sign",
+          "direction": "right",
+          "distance": "far",
+          "confidence": 0.75
+        }
+      ],
+      "lighting_quality": "good",
+      "motion_blur_detected": false,
+      "raw_response": "Scene: hallway\nText: []\nLandmarks: [door: right, mid, fire_extinguisher: right, near, exit_sign: right, far]\nLighting: good\nMotion: stable"
+    }
+  },
+  {
+    "device_id": "device_1768749116008_fhasdev67",
+    "timestamp": "2026-01-18T16:44:48.994Z",
+    "gps_latitude": 40.44340972,
+    "gps_longitude": -79.94469447,
+    "gps_accuracy": 35,
+    "metadata": {
+      "scene_type": "hallway",
+      "text_detected": [],
+      "landmarks": [
+        {
+          "type": "door",
+          "direction": "right",
+          "distance": "mid",
+          "confidence": 0.75
+        },
+        {
+          "type": "plant",
+          "direction": "right",
+          "distance": "near",
+          "confidence": 0.75
+        }
+      ],
+      "lighting_quality": "good",
+      "motion_blur_detected": false,
+      "raw_response": "Scene: hallway\nText: []\nLandmarks: [door: right, mid, plant: right, near]\nLighting: good\nMotion: yes"
+    }
+  },
+  {
+    "device_id": "device_1768749116008_fhasdev67",
+    "timestamp": "2026-01-18T16:45:55.348Z",
+    "gps_latitude": 40.44340574,
+    "gps_longitude": -79.94464632,
+    "gps_accuracy": 35,
+    "metadata": {
+      "scene_type": "hallway",
+      "text_detected": [
+        {
+          "text": "312",
+          "confidence": 0.8,
+          "includes_arrow": false
+        },
+        {
+          "text": "Science of Sound",
+          "confidence": 0.8,
+          "includes_arrow": false
+        },
+        {
+          "text": "3F",
+          "confidence": 0.8,
+          "includes_arrow": false
+        }
+      ],
+      "landmarks": [
+        {
+          "type": "door",
+          "direction": "right",
+          "distance": "mid",
+          "confidence": 0.75
+        },
+        {
+          "type": "room_number_plaque",
+          "direction": "left",
+          "distance": "near",
+          "confidence": 0.75
+        },
+        {
+          "type": "elevator_button_panel",
+          "direction": "left",
+          "distance": "near",
+          "confidence": 0.75
+        }
+      ],
+      "lighting_quality": "good",
+      "motion_blur_detected": false,
+      "raw_response": "Scene: hallway  \nText: [312, Science of Sound, 3F]  \nLandmarks: [door: right, mid, room_number_plaque: left, near, elevator_button_panel: left, near]  \nLighting: good  \nMotion: stable"
+    }
+  },
+  {
+    "device_id": "device_1768749116008_fhasdev67",
+    "timestamp": "2026-01-18T16:46:04.132Z",
+    "gps_latitude": 40.44340573,
+    "gps_longitude": -79.94464631,
+    "gps_accuracy": 35,
+    "metadata": {
+      "scene_type": "hallway",
+      "text_detected": [
+        {
+          "text": "Room 312",
+          "confidence": 0.8,
+          "includes_arrow": false
+        },
+        {
+          "text": "3F",
+          "confidence": 0.8,
+          "includes_arrow": false
+        }
+      ],
+      "landmarks": [
+        {
+          "type": "door",
+          "direction": "left",
+          "distance": "mid",
+          "confidence": 0.75
+        },
+        {
+          "type": "elevator",
+          "direction": "right",
+          "distance": "far",
+          "confidence": 0.75
+        },
+        {
+          "type": "exit_sign",
+          "direction": "ahead",
+          "distance": "far",
+          "confidence": 0.75
+        }
+      ],
+      "lighting_quality": "good",
+      "motion_blur_detected": false,
+      "raw_response": "Scene: hallway  \nText: [Room 312, 3F]  \nLandmarks: [door: left, mid, elevator: right, far, exit_sign: ahead, far]  \nLighting: good  \nMotion: stable"
+    }
+  },
+  {
+    "device_id": "device_1768749116008_fhasdev67",
+    "timestamp": "2026-01-18T16:46:04.132Z",
+    "gps_latitude": 40.44340573,
+    "gps_longitude": -79.94464631,
+    "gps_accuracy": 35,
+    "metadata": {
+      "scene_type": "hallway",
+      "text_detected": [
+        {
+          "text": "312",
+          "confidence": 0.8,
+          "includes_arrow": false
+        },
+        {
+          "text": "Floor 3",
+          "confidence": 0.8,
+          "includes_arrow": false
+        }
+      ],
+      "landmarks": [
+        {
+          "type": "door",
+          "direction": "left",
+          "distance": "mid",
+          "confidence": 0.75
+        },
+        {
+          "type": "room_number_plaque",
+          "direction": "right",
+          "distance": "near",
+          "confidence": 0.75
+        },
+        {
+          "type": "exit_sign",
+          "direction": "ahead",
+          "distance": "far",
+          "confidence": 0.75
+        }
+      ],
+      "lighting_quality": "good",
+      "motion_blur_detected": false,
+      "raw_response": "Scene: hallway  \nText: [312, Floor 3]  \nLandmarks: [door: left, mid, room_number_plaque: right, near, exit_sign: ahead, far]  \nLighting: good  \nMotion: stable"
+    }
+  },
+  {
+    "device_id": "device_1768749116008_fhasdev67",
+    "timestamp": "2026-01-18T16:46:04.132Z",
+    "gps_latitude": 40.44340573,
+    "gps_longitude": -79.94464631,
+    "gps_accuracy": 35,
+    "metadata": {
+      "scene_type": "hallway",
+      "text_detected": [
+        {
+          "text": "312",
+          "confidence": 0.8,
+          "includes_arrow": false
+        }
+      ],
+      "landmarks": [
+        {
+          "type": "door",
+          "direction": "left",
+          "distance": "mid",
+          "confidence": 0.75
+        },
+        {
+          "type": "elevator",
+          "direction": "right",
+          "distance": "far",
+          "confidence": 0.75
+        },
+        {
+          "type": "exit_sign",
+          "direction": "ahead",
+          "distance": "far",
+          "confidence": 0.75
+        }
+      ],
+      "lighting_quality": "good",
+      "motion_blur_detected": true,
+      "raw_response": "Scene: hallway  \nText: [312]  \nLandmarks: [door: left, mid, elevator: right, far, exit_sign: ahead, far]  \nLighting: good  \nMotion: detected"
+    }
+  },
+  {
+    "device_id": "device_1768749116008_fhasdev67",
+    "timestamp": "2026-01-18T16:48:54.665Z",
+    "gps_latitude": 40.44340825,
+    "gps_longitude": -79.94468688,
+    "gps_accuracy": 35,
+    "metadata": {
+      "scene_type": "hallway",
+      "text_detected": [],
+      "landmarks": [
+        {
+          "type": "door",
+          "direction": "right",
+          "distance": "mid",
+          "confidence": 0.75
+        },
+        {
+          "type": "door",
+          "direction": "left",
+          "distance": "far",
+          "confidence": 0.75
+        },
+        {
+          "type": "plant",
+          "direction": "right",
+          "distance": "near",
+          "confidence": 0.75
+        }
+      ],
+      "lighting_quality": "good",
+      "motion_blur_detected": false,
+      "raw_response": "Scene: hallway\nText: []\nLandmarks: [door: right, mid, door: left, far, plant: right, near]\nLighting: good\nMotion: stable"
+    }
+  },
+  {
+    "device_id": "device_1768749116008_fhasdev67",
+    "timestamp": "2026-01-18T16:49:34.976Z",
+    "gps_latitude": 40.44340825,
+    "gps_longitude": -79.94468688,
+    "gps_accuracy": 35,
+    "metadata": {
+      "scene_type": "hallway",
+      "text_detected": [
+        {
+          "text": "Room 312",
+          "confidence": 0.8,
+          "includes_arrow": false
+        }
+      ],
+      "landmarks": [
+        {
+          "type": "door",
+          "direction": "left",
+          "distance": "near",
+          "confidence": 0.75
+        },
+        {
+          "type": "room_number_plaque",
+          "direction": "left",
+          "distance": "near",
+          "confidence": 0.75
+        }
+      ],
+      "lighting_quality": "good",
+      "motion_blur_detected": false,
+      "raw_response": "Scene: hallway  \nText: [Room 312]  \nLandmarks: [door: left, near, room_number_plaque: left, near]  \nLighting: good  \nMotion: stable"
+    }
+  },
+  {
+    "device_id": "device_1768749116008_fhasdev67",
+    "timestamp": "2026-01-18T16:49:34.976Z",
+    "gps_latitude": 40.44340825,
+    "gps_longitude": -79.94468688,
+    "gps_accuracy": 35,
+    "metadata": {
+      "scene_type": "hallway",
+      "text_detected": [],
+      "landmarks": [
+        {
+          "type": "door",
+          "direction": "left",
+          "distance": "near",
+          "confidence": 0.75
+        },
+        {
+          "type": "door",
+          "direction": "right",
+          "distance": "near",
+          "confidence": 0.75
+        },
+        {
+          "type": "staircase",
+          "direction": "ahead",
+          "distance": "far",
+          "confidence": 0.75
+        },
+        {
+          "type": "elevator",
+          "direction": "right",
+          "distance": "mid",
+          "confidence": 0.75
+        }
+      ],
+      "lighting_quality": "good",
+      "motion_blur_detected": false,
+      "raw_response": "Scene: hallway\nText: []\nLandmarks: [door: left, near, door: right, near, staircase: ahead, far, elevator: right, mid]\nLighting: good\nMotion: stable"
+    }
+  },
+  {
+    "device_id": "device_1768749116008_fhasdev67",
+    "timestamp": "2026-01-18T16:49:39.715Z",
+    "gps_latitude": 40.4433903,
+    "gps_longitude": -79.94472119,
+    "gps_accuracy": 35,
+    "metadata": {
+      "scene_type": "hallway",
+      "text_detected": [
+        {
+          "text": "9201",
+          "confidence": 0.8,
+          "includes_arrow": false
+        }
+      ],
+      "landmarks": [
+        {
+          "type": "room_number_plaque",
+          "direction": "ahead",
+          "distance": "near",
+          "confidence": 0.75
+        }
+      ],
+      "lighting_quality": "good",
+      "motion_blur_detected": false,
+      "raw_response": "Scene: hallway  \nText: [9201]  \nLandmarks: [room_number_plaque: ahead, near]  \nLighting: good  \nMotion: stable"
+    }
+  },
+  {
+    "device_id": "device_1768749116008_fhasdev67",
+    "timestamp": "2026-01-18T16:49:53.668Z",
+    "gps_latitude": 40.4433903,
+    "gps_longitude": -79.94472119,
+    "gps_accuracy": 35,
+    "metadata": {
+      "scene_type": "hallway",
+      "text_detected": [
+        {
+          "text": "STAIRS 9",
+          "confidence": 0.8,
+          "includes_arrow": false
+        },
+        {
+          "text": "9",
+          "confidence": 0.8,
+          "includes_arrow": false
+        },
+        {
+          "text": "FIRE",
+          "confidence": 0.8,
+          "includes_arrow": false
+        }
+      ],
+      "landmarks": [
+        {
+          "type": "door",
+          "direction": "left",
+          "distance": "near",
+          "confidence": 0.75
+        },
+        {
+          "type": "staircase",
+          "direction": "ahead",
+          "distance": "near",
+          "confidence": 0.75
+        },
+        {
+          "type": "fire_extinguisher",
+          "direction": "right",
+          "distance": "near",
+          "confidence": 0.75
+        },
+        {
+          "type": "room_number_plaque",
+          "direction": "ahead",
+          "distance": "near",
+          "confidence": 0.75
+        }
+      ],
+      "lighting_quality": "good",
+      "motion_blur_detected": false,
+      "raw_response": "Scene: hallway  \nText: [STAIRS 9, 9, FIRE]  \nLandmarks: [door: left, near, staircase: ahead, near, fire_extinguisher: right, near, room_number_plaque: ahead, near]  \nLighting: good  \nMotion: stable"
+    }
+  },
+  {
+    "device_id": "device_1768749116008_fhasdev67",
+    "timestamp": "2026-01-18T16:49:53.668Z",
+    "gps_latitude": 40.4433903,
+    "gps_longitude": -79.94472119,
+    "gps_accuracy": 35,
+    "metadata": {
+      "scene_type": "hallway",
+      "text_detected": [
+        {
+          "text": "LEVEL 9",
+          "confidence": 0.8,
+          "includes_arrow": false
+        },
+        {
+          "text": "STAIR 4",
+          "confidence": 0.8,
+          "includes_arrow": false
+        }
+      ],
+      "landmarks": [
+        {
+          "type": "door",
+          "direction": "left",
+          "distance": "near",
+          "confidence": 0.75
+        },
+        {
+          "type": "stair_sign",
+          "direction": "ahead",
+          "distance": "near",
+          "confidence": 0.75
+        }
+      ],
+      "lighting_quality": "good",
+      "motion_blur_detected": false,
+      "raw_response": "Scene: hallway  \nText: [LEVEL 9, STAIR 4]  \nLandmarks: [door: left, near, stair_sign: ahead, near]  \nLighting: good  \nMotion: stable"
+    }
   }
 ]
