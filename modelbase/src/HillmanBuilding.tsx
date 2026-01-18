@@ -83,23 +83,11 @@ export function HillmanBuilding() {
       {buildingConfig.floors.map((floor: any, floorIndex) => {
         const isGlassFloor = floorIndex >= 3 && floorIndex <= 4;
 
-        const outerWallMaterial = isGlassFloor ? (
-          <meshPhysicalMaterial
-            color="#ffffff"
+        const outerWallMaterial = (
+          <meshBasicMaterial
+            color="#a8d4f0"
             transparent
-            opacity={0.15}
-            transmission={0.95}
-            thickness={0.5}
-            roughness={0.05}
-            metalness={0.05}
-          />
-        ) : (
-          <meshStandardMaterial
-            color="#ffffff"
-            transparent
-            opacity={0.3}
-            metalness={0.7}
-            roughness={0.3}
+            opacity={0.25}
           />
         );
 
@@ -121,7 +109,7 @@ export function HillmanBuilding() {
               args={[floor.buildingWidth, 0.2, floor.buildingDepth]}
               position={[0, -0.1, 0]}
             >
-              <meshStandardMaterial color="#555555" />
+              <meshBasicMaterial color="#3a4a5a" />
             </Box>
 
             {/* Outer walls */}
@@ -167,62 +155,35 @@ export function HillmanBuilding() {
 
             {/* Rooms */}
             {floor.rooms.map((room: Room, roomIndex: number) => {
-              const roomColor = '#ffffff';
-              const roomOpacity = 0.05;
-
               return (
                 <group key={roomIndex}>
-                  {/* Room walls */}
+                  {/* Room walls - lightweight materials */}
                   <Box
                     args={[room.width - wallThickness * 0.5, floorHeight * 0.85, wallThickness * 0.3]}
                     position={[room.x, floorHeight / 2, room.z + room.depth / 2]}
                   >
-                    <meshStandardMaterial
-                      color={roomColor}
-                      transparent
-                      opacity={roomOpacity}
-                      emissive={roomColor}
-                      emissiveIntensity={0.05}
-                    />
+                    <meshBasicMaterial color="#a8d4f0" transparent opacity={0.2} />
                   </Box>
 
                   <Box
                     args={[room.width - wallThickness * 0.5, floorHeight * 0.85, wallThickness * 0.3]}
                     position={[room.x, floorHeight / 2, room.z - room.depth / 2]}
                   >
-                    <meshStandardMaterial
-                      color={roomColor}
-                      transparent
-                      opacity={roomOpacity}
-                      emissive={roomColor}
-                      emissiveIntensity={0.05}
-                    />
+                    <meshBasicMaterial color="#a8d4f0" transparent opacity={0.2} />
                   </Box>
 
                   <Box
                     args={[wallThickness * 0.3, floorHeight * 0.85, room.depth - wallThickness * 0.5]}
                     position={[room.x + room.width / 2, floorHeight / 2, room.z]}
                   >
-                    <meshStandardMaterial
-                      color={roomColor}
-                      transparent
-                      opacity={roomOpacity}
-                      emissive={roomColor}
-                      emissiveIntensity={0.05}
-                    />
+                    <meshBasicMaterial color="#a8d4f0" transparent opacity={0.2} />
                   </Box>
 
                   <Box
                     args={[wallThickness * 0.3, floorHeight * 0.85, room.depth - wallThickness * 0.5]}
                     position={[room.x - room.width / 2, floorHeight / 2, room.z]}
                   >
-                    <meshStandardMaterial
-                      color={roomColor}
-                      transparent
-                      opacity={roomOpacity}
-                      emissive={roomColor}
-                      emissiveIntensity={0.05}
-                    />
+                    <meshBasicMaterial color="#a8d4f0" transparent opacity={0.2} />
                   </Box>
 
                   {/* Room label */}

@@ -19,15 +19,7 @@ export function ConnectingBridges() {
           <group key={floorNum} position={[-30, yPos, 0]}>
             {/* Main bridge structure */}
             <Box args={[bridgeLength, bridgeHeight, bridgeWidth]}>
-              <meshPhysicalMaterial
-                color="#ffffff"
-                transparent
-                opacity={0.15}
-                transmission={0.95}
-                thickness={0.5}
-                roughness={0.05}
-                metalness={0.05}
-              />
+              <meshBasicMaterial color="#a8d4f0" transparent opacity={0.2} />
             </Box>
 
             {/* Glass walls on sides */}
@@ -35,30 +27,14 @@ export function ConnectingBridges() {
               args={[bridgeLength, bridgeHeight - 0.5, 0.1]}
               position={[0, 0, bridgeWidth / 2]}
             >
-              <meshPhysicalMaterial
-                color="#ffffff"
-                transparent
-                opacity={0.1}
-                transmission={0.95}
-                thickness={0.3}
-                roughness={0.05}
-                metalness={0.05}
-              />
+              <meshBasicMaterial color="#a8d4f0" transparent opacity={0.15} />
             </Box>
 
             <Box
               args={[bridgeLength, bridgeHeight - 0.5, 0.1]}
               position={[0, 0, -bridgeWidth / 2]}
             >
-              <meshPhysicalMaterial
-                color="#ffffff"
-                transparent
-                opacity={0.1}
-                transmission={0.95}
-                thickness={0.3}
-                roughness={0.05}
-                metalness={0.05}
-              />
+              <meshBasicMaterial color="#a8d4f0" transparent opacity={0.15} />
             </Box>
 
             {/* Floor */}
@@ -66,7 +42,7 @@ export function ConnectingBridges() {
               args={[bridgeLength, 0.15, bridgeWidth]}
               position={[0, -bridgeHeight / 2, 0]}
             >
-              <meshStandardMaterial color="#666666" />
+              <meshBasicMaterial color="#3a4a5a" />
             </Box>
 
             {/* Support beams underneath */}

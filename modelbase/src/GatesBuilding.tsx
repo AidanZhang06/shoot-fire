@@ -385,24 +385,12 @@ export function GatesBuilding() {
       {building.map((level: Level, levelIndex: number) => {
         const yPos = levelIndex * floorHeight;
 
-        // Materials - made walls more visible
-        const outerWallMaterial = level.isGlassVolume ? (
-          <meshPhysicalMaterial
-            color="#e0e0e0"
+        // Materials - lightweight walls with good contrast
+        const outerWallMaterial = (
+          <meshBasicMaterial
+            color="#a8d4f0"
             transparent
-            opacity={0.4}
-            transmission={0.7}
-            thickness={0.5}
-            roughness={0.1}
-            metalness={0.2}
-          />
-        ) : (
-          <meshStandardMaterial
-            color="#cccccc"
-            transparent
-            opacity={0.6}
-            metalness={0.6}
-            roughness={0.4}
+            opacity={0.25}
           />
         );
 
@@ -427,7 +415,7 @@ export function GatesBuilding() {
                   args={[section.width, 0.3, section.depth]}
                   position={[section.x, 0, section.z]}
                 >
-                  <meshStandardMaterial color="#555555" />
+                  <meshBasicMaterial color="#3a4a5a" />
                 </Box>
 
                 {/* Atrium void in main wing only, for L3-L6 */}
@@ -512,86 +500,41 @@ export function GatesBuilding() {
                 args={[8, floorHeight, 4]}
                 position={[level.sections[0].width / 2 + 4, floorHeight / 2, 0]}
               >
-                <meshStandardMaterial
-                  color="#88ccff"
-                  transparent
-                  opacity={0.4}
-                  emissive="#0088ff"
-                  emissiveIntensity={0.3}
-                />
+                <meshBasicMaterial color="#a8d4f0" transparent opacity={0.25} />
               </Box>
             )}
 
             {/* Rooms */}
             {level.rooms.map((room: Room, roomIndex: number) => {
-              const roomColor =
-                room.type === 'cafe' ? '#ff8844' :
-                room.type === 'admin' ? '#4488ff' :
-                room.type === 'lab' ? '#88ff44' :
-                room.type === 'lecture' ? '#ff44ff' :
-                room.type === 'lounge' ? '#44ffff' :
-                room.type === 'conference' ? '#ff88ff' :
-                room.type === 'classroom' ? '#ffff44' :
-                '#ffffff';
-
-              const roomOpacity = (room.type === 'office' || room.type === 'lab') ? 0.05 :
-                                  (room.type === 'lounge' || room.type === 'conference') ? 0.2 : 0.15;
-
-              const emissiveIntensity = (room.type === 'lounge' || room.type === 'conference' || room.type === 'cafe') ? 0.15 : 0.08;
-
               return (
                 <group key={roomIndex}>
-                  {/* Room walls */}
+                  {/* Room walls - lightweight materials */}
                   <Box
                     args={[room.width - wallThickness * 0.5, floorHeight * 0.85, wallThickness * 0.3]}
                     position={[room.x, floorHeight / 2, room.z + room.depth / 2]}
                   >
-                    <meshStandardMaterial
-                      color={roomColor}
-                      transparent
-                      opacity={roomOpacity}
-                      emissive={roomColor}
-                      emissiveIntensity={emissiveIntensity}
-                    />
+                    <meshBasicMaterial color="#a8d4f0" transparent opacity={0.2} />
                   </Box>
 
                   <Box
                     args={[room.width - wallThickness * 0.5, floorHeight * 0.85, wallThickness * 0.3]}
                     position={[room.x, floorHeight / 2, room.z - room.depth / 2]}
                   >
-                    <meshStandardMaterial
-                      color={roomColor}
-                      transparent
-                      opacity={roomOpacity}
-                      emissive={roomColor}
-                      emissiveIntensity={emissiveIntensity}
-                    />
+                    <meshBasicMaterial color="#a8d4f0" transparent opacity={0.2} />
                   </Box>
 
                   <Box
                     args={[wallThickness * 0.3, floorHeight * 0.85, room.depth - wallThickness * 0.5]}
                     position={[room.x + room.width / 2, floorHeight / 2, room.z]}
                   >
-                    <meshStandardMaterial
-                      color={roomColor}
-                      transparent
-                      opacity={roomOpacity}
-                      emissive={roomColor}
-                      emissiveIntensity={emissiveIntensity}
-                    />
+                    <meshBasicMaterial color="#a8d4f0" transparent opacity={0.2} />
                   </Box>
 
                   <Box
                     args={[wallThickness * 0.3, floorHeight * 0.85, room.depth - wallThickness * 0.5]}
                     position={[room.x - room.width / 2, floorHeight / 2, room.z]}
                   >
-                    <meshStandardMaterial
-                      color={roomColor}
-                      transparent
-                      opacity={roomOpacity}
-                      emissive={roomColor}
-                      emissiveIntensity={emissiveIntensity}
-                    />
+                    <meshBasicMaterial color="#a8d4f0" transparent opacity={0.2} />
                   </Box>
 
                   {/* Room label */}
