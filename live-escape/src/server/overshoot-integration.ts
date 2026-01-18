@@ -190,9 +190,10 @@ export class EmergencyVideoProcessor {
       await session.stop();
       this.visionSessions.delete(userId);
       this.processingStartTimes.delete(userId);
-      console.log(`[Overshoot] Stopped session for user ${userId}`);
+      this.userStates.delete(userId);
+      console.log(`[Overshoot] ✅ Stopped and cleaned up session for user ${userId}`);
     } catch (error) {
-      console.error(`[Overshoot] Error stopping session for user ${userId}:`, error);
+      console.error(`[Overshoot] ❌ Error stopping session for user ${userId}:`, error);
     }
   }
 

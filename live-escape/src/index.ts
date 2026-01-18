@@ -30,6 +30,10 @@ const PORT = process.env.PORT || 3000;
 const orchestrator = new EvacuationOrchestrator(io);
 const mockData = new MockDataProvider();
 
+// Track socket-to-userId mapping for proper cleanup on disconnect
+const socketToUser = new Map<string, string>();
+const userToSocket = new Map<string, string>();
+
 // Initialize with mock data
 console.log('[Server] Initializing mock data...');
 const mockExits = mockData.getMockExits();
@@ -71,7 +75,26 @@ io.on('connection', (socket) => {
   // User registration
   socket.on('register-user', async (data: { userId: string; position: any }) => {
     const { userId, position } = data;
-    console.log(`[Server] User registered: ${userId}`);
+    console.log(`[Server] User registration request: ${userId} (socket: ${socket.id})`);
+
+    // Check if user already registered with a different socket (reconnection case)
+    const existingSocket = userToSocket.get(userId);
+    if (existingSocket && existingSocket !== socket.id) {
+      console.log(`[Server] User ${userId} reconnecting - disconnecting old socket ${existingSocket}`);
+
+      // Force disconnect old socket
+      const oldSocket = io.sockets.sockets.get(existingSocket);
+      if (oldSocket) {
+        oldSocket.disconnect(true);
+      }
+
+      // Clean up old mapping
+      socketToUser.delete(existingSocket);
+    }
+
+    // Store bidirectional socket-userId mapping
+    socketToUser.set(socket.id, userId);
+    userToSocket.set(userId, socket.id);
 
     // Join user-specific room
     socket.join(userId);
@@ -159,10 +182,30 @@ io.on('connection', (socket) => {
   socket.on('disconnect', async () => {
     console.log(`[Server] Client disconnected: ${socket.id}`);
 
-    // Find userId for this socket and stop processing
-    // In production, maintain socket-to-userId mapping
-    // For now, we'll need to track socket-to-userId mapping
-    // TODO: Implement proper cleanup when we have the mapping
+    // Look up userId for this socket
+    const userId = socketToUser.get(socket.id);
+
+    if (userId) {
+      console.log(`[Server] Cleaning up user ${userId} after disconnect`);
+
+      try {
+        // Stop video processing for this user
+        await videoProcessor.stopProcessingForUser(userId);
+
+        // Remove user from orchestrator
+        orchestrator.removeUser(userId);
+
+        // Clean up socket-userId mapping
+        socketToUser.delete(socket.id);
+        userToSocket.delete(userId);
+
+        console.log(`[Server] ✅ User ${userId} successfully removed`);
+      } catch (error) {
+        console.error(`[Server] ❌ Error cleaning up user ${userId}:`, error);
+      }
+    } else {
+      console.log(`[Server] ⚠️ No userId found for disconnected socket ${socket.id}`);
+    }
   });
 
   // Manual stop processing

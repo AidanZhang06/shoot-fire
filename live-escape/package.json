@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "nodemon src/index.ts",
     "build": "tsc",
+    "build-client": "vite build",
+    "dev-full": "concurrently \"vite build --watch\" \"nodemon src/index.ts\"",
     "start": "node dist/index.js",
     "test": "jest",
     "example": "node examples/client-example.js"
@@ -33,10 +35,13 @@
     "@types/express": "^4.17.21",
     "@types/jest": "^29.5.11",
     "@types/node": "^20.11.0",
+    "@types/three": "^0.160.0",
+    "concurrently": "^8.2.2",
     "jest": "^29.7.0",
     "nodemon": "^3.0.3",
     "socket.io-client": "^4.6.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vite": "^5.0.12"
   }
 }

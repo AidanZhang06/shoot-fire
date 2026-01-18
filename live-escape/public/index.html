@@ -4,8 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Emergency Evacuation System</title>
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+    </script>
     <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+    <script type="module">
+      import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+      window.OrbitControls = OrbitControls;
+      console.log('✅ OrbitControls loaded');
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -350,6 +364,36 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* 3D Map Controls */
+        .map-control-btn {
+            width: 32px;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+
+        .map-control-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .map-control-btn.active {
+            background: var(--orange-500);
+            border-color: var(--orange-500);
+            box-shadow: 0 0 8px rgba(242, 112, 89, 0.5);
+        }
+
+        .map-control-btn:active {
+            transform: translateY(0);
+        }
     </style>
 </head>
 <body>
@@ -386,6 +430,24 @@
                         </div>
                         <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
 
+                        <!-- 3D Minimap (Bottom-left) - ALWAYS VISIBLE -->
+                        <div id="minimap-3d" style="position: absolute; bottom: 16px; left: 16px; width: 280px; height: 280px; border-radius: var(--radius-md); overflow: hidden; background: rgba(0, 0, 0, 0.95); border: 2px solid rgba(255,255,255,0.2); box-shadow: var(--shadow-lg); z-index: 100;">
+                            <!-- Three.js renderer will be injected here -->
+
+                            <!-- 3D Minimap Controls -->
+                            <div id="map-controls" style="position: absolute; bottom: 0; left: 0; right: 0; height: 36px; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(4px); border-top: 1px solid rgba(255,255,255,0.1); padding: 6px; display: flex; gap: 4px; align-items: center;">
+                                <button id="toggle-auto-follow" class="map-control-btn active" title="Auto-follow camera" onclick="toggleAutoFollow()">
+                                    <i data-lucide="navigation" style="width: 14px; height: 14px; color: white;"></i>
+                                </button>
+                                <button id="toggle-route" class="map-control-btn active" title="Show/hide route" onclick="toggleRoute()">
+                                    <i data-lucide="route" style="width: 14px; height: 14px; color: white;"></i>
+                                </button>
+                                <button id="toggle-exits" class="map-control-btn active" title="Show/hide exits" onclick="toggleExits()">
+                                    <i data-lucide="door-open" style="width: 14px; height: 14px; color: white;"></i>
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- Guidance Overlay -->
                         <div id="guidance-overlay" class="absolute inset-0 pointer-events-none" style="display: none;">
 
@@ -395,11 +457,6 @@
                                     <i id="action-icon" data-lucide="arrow-up" style="width: 20px; height: 20px; color: var(--orange-500);"></i>
                                     <span id="action-text" style="font-size: 16px; font-weight: 600; color: var(--text-primary);">CONTINUE STRAIGHT</span>
                                 </div>
-                            </div>
-
-                            <!-- Minimap (Bottom-left) -->
-                            <div id="minimap" style="position: absolute; bottom: 80px; left: 16px; width: 140px; height: 140px; border-radius: var(--radius-md); backdrop-filter: blur(12px); overflow: hidden; background: rgba(0, 0, 0, 0.85); border: 1px solid rgba(255,255,255,0.15); box-shadow: var(--shadow-md);">
-                                <canvas id="minimap-canvas" width="140" height="140"></canvas>
                             </div>
 
                             <!-- Hazard Warnings (Right side) -->
@@ -461,6 +518,169 @@
         </div>
     </div>
 
+    <!-- Load 3D Visualization Library (IIFE format) -->
+    <script src="./dist/visualization.iife.js"></script>
+
+    <script>
+        // Initialize 3D map when DOM is ready
+        function init3DMap() {
+            console.log('🚀 Initializing 3D map...');
+            console.log('THREE available:', typeof THREE !== 'undefined');
+            console.log('LiveEscapeViz available:', typeof LiveEscapeViz !== 'undefined');
+
+            const container = document.getElementById('minimap-3d');
+            if (!container) {
+                console.error('❌ Container minimap-3d not found!');
+                return;
+            }
+
+            if (typeof THREE === 'undefined') {
+                console.error('❌ THREE.js not loaded!');
+                return;
+            }
+
+            if (typeof LiveEscapeViz === 'undefined') {
+                console.error('❌ LiveEscapeViz not loaded!');
+                return;
+            }
+
+            try {
+                window.map3DViewer = new LiveEscapeViz.Map3DViewer({
+                    container: container,
+                    buildingDimensions: { width: 50, height: 50 },
+                    floorHeight: 3.5
+                });
+
+                // Initialize OrbitControls when available
+                if (typeof window.OrbitControls !== 'undefined') {
+                    window.map3DViewer.initializeControls(window.OrbitControls);
+                    console.log('✅ OrbitControls initialized');
+                } else {
+                    console.warn('⚠️ OrbitControls not loaded yet, retrying...');
+                    setTimeout(() => {
+                        if (typeof window.OrbitControls !== 'undefined') {
+                            window.map3DViewer.initializeControls(window.OrbitControls);
+                            console.log('✅ OrbitControls initialized (delayed)');
+                        }
+                    }, 500);
+                }
+
+                window.map3DViewer.start();
+
+                // Set initial user position (placeholder)
+                const initialPosition = window.userPosition || { x: 0, y: 3.5, z: 0 };
+                window.map3DViewer.updateUserPosition(initialPosition);
+                console.log('✅ Initial user position set:', initialPosition);
+
+                console.log('✅ 3D Map initialized successfully!');
+            } catch (error) {
+                console.error('❌ Failed to initialize 3D map:', error);
+                console.error('Error details:', error.message);
+                console.error('Error stack:', error.stack);
+            }
+        }
+
+        // Wait for DOM to be ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init3DMap);
+        } else {
+            // DOM already loaded, initialize immediately
+            init3DMap();
+        }
+
+        // 3D Map Control Functions
+        window.toggleAutoFollow = function() {
+            if (!window.map3DViewer) return;
+
+            const currentState = window.map3DViewer.getAutoFollow();
+            const newState = !currentState;
+            window.map3DViewer.setAutoFollow(newState);
+
+            const btn = document.getElementById('toggle-auto-follow');
+            if (newState) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+
+            console.log('Auto-follow:', newState ? 'ON' : 'OFF');
+        };
+
+        window.toggleRoute = function() {
+            if (!window.map3DViewer) return;
+
+            const currentState = window.map3DViewer.getRouteVisible();
+            const newState = !currentState;
+            window.map3DViewer.setRouteVisible(newState);
+
+            const btn = document.getElementById('toggle-route');
+            if (newState) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+
+            console.log('Route visible:', newState ? 'ON' : 'OFF');
+        };
+
+        window.toggleExits = function() {
+            if (!window.map3DViewer) return;
+
+            const currentState = window.map3DViewer.getExitsVisible();
+            const newState = !currentState;
+            window.map3DViewer.setExitsVisible(newState);
+
+            const btn = document.getElementById('toggle-exits');
+            if (newState) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+
+            console.log('Exits visible:', newState ? 'ON' : 'OFF');
+        };
+
+        /**
+         * Set user position manually (for testing/debugging)
+         * This will be replaced by position calibrator integration
+         *
+         * Example usage:
+         *   setUserPosition(10, 1, 15)        // x=10, floor=1, z=15
+         *   setUserPosition(-5, 3, 20)        // x=-5, floor=3, z=20
+         *
+         * @param {number} x - X coordinate
+         * @param {number} floor - Floor number (1-9)
+         * @param {number} z - Z coordinate
+         */
+        window.setUserPosition = function(x, floor, z) {
+            if (!window.map3DViewer) {
+                console.error('❌ 3D Map not initialized yet');
+                return;
+            }
+
+            // Convert floor number to y coordinate (floor * floorHeight)
+            const y = floor * 3.5;
+
+            window.userPosition = { x, y, z };
+            window.map3DViewer.updateUserPosition(window.userPosition);
+
+            console.log(`✅ User position updated:`, window.userPosition);
+            console.log(`   Floor: ${floor}, Coordinates: (${x}, ${y}, ${z})`);
+        };
+
+        /**
+         * Get current user position
+         */
+        window.getUserPosition = function() {
+            console.log('Current user position:', window.userPosition);
+            if (window.userPosition) {
+                const floor = Math.round(window.userPosition.y / 3.5);
+                console.log(`Floor: ${floor}, Coordinates: (${window.userPosition.x}, ${window.userPosition.y}, ${window.userPosition.z})`);
+            }
+            return window.userPosition;
+        };
+    </script>
+
     <script>
         // Initialize Lucide icons
         lucide.createIcons();
@@ -479,6 +699,15 @@
         let guidanceActive = false;
         let lastGuidanceUpdate = 0;
         let lastSpeechTime = 0;
+
+        // User position state (placeholder - will be replaced with position calibrator)
+        window.userPosition = {
+            x: 0,      // Center of building (placeholder)
+            y: 3.5,    // Floor 1 (y = floor * 3.5)
+            z: 0       // Center (placeholder)
+        };
+
+        // 3D Map Viewer (initialized automatically on page load via module script above)
 
         // Initialize Socket.IO
         function initSocket() {
@@ -507,17 +736,41 @@
                 console.log('📍 Guidance update:', payload);
                 lastGuidanceUpdate = Date.now();
 
+                // Update 3D scene (map3DViewer is initialized on page load)
+                if (window.map3DViewer && payload.route) {
+                    // Update user position from first waypoint or use stored position
+                    if (payload.route.waypoints && payload.route.waypoints.length > 0) {
+                        window.userPosition = payload.route.waypoints[0];
+                    }
+
+                    window.map3DViewer.updateUserPosition(window.userPosition);
+
+                    // Route visualization
+                    if (payload.route.waypoints && payload.route.waypoints.length > 1) {
+                        window.map3DViewer.updateRoute(payload.route);
+                    }
+
+                    // Hazards
+                    if (payload.route.hazardWarnings && payload.route.hazardWarnings.length > 0) {
+                        window.map3DViewer.clearHazards();
+                        const intensityMap = { low: 1, medium: 3, high: 4, critical: 5 };
+                        payload.route.hazardWarnings.forEach(hw => {
+                            const intensity = intensityMap[hw.severity] || 3;
+                            window.map3DViewer.addHazard(hw.location, hw.type, intensity);
+                        });
+                    }
+                }
+
                 // Show overlay if not visible
                 if (!guidanceActive) {
                     document.getElementById('guidance-overlay').style.display = 'block';
                     guidanceActive = true;
                 }
 
-                // Update all components
+                // Update all UI components
                 updateImmediateAction(payload.immediateActions[0]);
                 updateProgressInfo(payload.route);
                 updateHazardWarnings(payload.route.hazardWarnings);
-                updateMinimap(payload.visualization, payload.route);
                 speakInstruction(payload.audio);
             });
 

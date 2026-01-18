@@ -20,7 +20,7 @@ export class EvacuationOrchestrator {
   private readonly HAZARD_PROXIMITY_RADIUS = 5; // meters
 
   // Feature flags
-  private readonly ENABLE_GUIDANCE_DELIVERY = false; // Set to true when accurate positioning is implemented
+  private readonly ENABLE_GUIDANCE_DELIVERY = true; // Enabled for multi-user testing (using placeholder positions)
 
   // State
   private users: Map<string, UserState>;
