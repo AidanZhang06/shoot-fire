@@ -65,7 +65,7 @@ export function CharacterController({
       {/* Direction indicator arrow */}
       <mesh position={[0.8, 0.5, 0]} rotation={[0, 0, -Math.PI / 2]}>
         <coneGeometry args={[0.2, 0.5, 8]} />
-        <meshStandardMaterial color="#00ff00" emissive="#00ff00" emissiveIntensity={0.5} />
+        <meshStandardMaterial color="#ff0000" emissive="#ff0000" emissiveIntensity={0.5} />
       </mesh>
       
       {/* Coordinate axes (optional) */}

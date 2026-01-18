@@ -26,6 +26,7 @@ export interface FireScenario {
   description: string;
   difficulty: 'easy' | 'medium' | 'hard';
   estimatedTimeToSafety: number; // in seconds
+  floor?: number; // Floor number where scenario takes place
 }
 
 export interface ScenarioGenerationInput {

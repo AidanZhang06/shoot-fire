@@ -50,21 +50,30 @@ export function ScenarioPanel({
     setStep(0);
     setEscaped(false);
 
+    // Map difficulty to floor ranges
+    const floorMap = {
+      easy: 3,    // Lower floors (2-3)
+      medium: 5,  // Middle floors (4-6)
+      hard: 8     // Higher floors (7-9)
+    };
+
+    const selectedFloor = floorMap[difficulty];
+
     try {
       const result = await scenarioGenerator.generateScenario({
         buildingLayout: 'Gates Building - 9 floors, L-shaped',
         difficulty,
-        floor: 6
+        floor: selectedFloor
       });
 
       setScenario(result.scenario);
-      
+
       if (onScenarioStart) {
         onScenarioStart(result.scenario);
       }
 
       // Set initial situation
-      generateSituation(result.scenario, 0);
+      generateSituation(result.scenario, 0, selectedFloor);
     } catch (error) {
       console.error('Failed to generate scenario:', error);
     } finally {
@@ -72,10 +81,10 @@ export function ScenarioPanel({
     }
   };
 
-  const generateSituation = (scn: FireScenario, stepNum: number) => {
+  const generateSituation = (scn: FireScenario, stepNum: number, floor: number = 6) => {
     const situations = [
       {
-        situation: `🔥 The fire alarm blares! You're on floor 6. Smoke is visible coming from the east corridor where a fire has started. The hallway is getting hazy.`,
+        situation: `🔥 The fire alarm blares! You're on floor ${floor}. Smoke is visible coming from the east corridor where a fire has started. The hallway is getting hazy.`,
         choices: [
           { id: 'assess', label: 'Stop and look for exit signs', description: 'Check your surroundings before moving' },
           { id: 'east', label: 'Head toward the east exit', description: 'It\'s the closest exit' },
@@ -117,7 +126,7 @@ export function ScenarioPanel({
 
     // Parse the situation text to extract location and hazard info
     if (onScenarioParsed) {
-      const parsed = scenarioParser.parseScenarioText(current.situation, 6);
+      const parsed = scenarioParser.parseScenarioText(current.situation, floor);
       onScenarioParsed(parsed);
     }
   };

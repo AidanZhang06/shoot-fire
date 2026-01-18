@@ -30,11 +30,12 @@ export class MockScenarioGenerator {
         ],
         blockedNodes: [], // No blocked nodes
         blockedPaths: [], // All paths clear
-        availableExits: ['exit-6-west', 'exit-6-south', 'exit-6-east'], // Multiple clear exits
+        availableExits: [`exit-${floor}-west`, `exit-${floor}-east`], // Multiple clear exits
         correctPath: ['start', 'center', 'west-exit'],
         description: 'A small fire has started in the east corridor, far from your location. Light smoke is visible but exits are clear. You have multiple safe paths - the west or south exits are recommended.',
         difficulty: 'easy',
         estimatedTimeToSafety: 60,
+        floor: floor,
         safetyNotes: 'Always use the nearest safe exit. Avoid smoke-filled areas. Multiple exits are available.'
       },
       medium: {
@@ -66,11 +67,12 @@ export class MockScenarioGenerator {
         ],
         blockedNodes: ['node-east-3'], // One node blocked
         blockedPaths: ['node-east-2-node-east-3'], // One path blocked
-        availableExits: ['exit-6-west', 'exit-6-south'], // Two exits (one blocked)
+        availableExits: [`exit-${floor}-west`], // Two exits (one blocked)
         correctPath: ['start', 'center', 'south-exit'],
         description: 'Multiple fires have broken out in the building. The east exit is blocked by fire and heavy smoke. The west exit has moderate smoke but is passable with caution. Your safest route is through the south exit.',
         difficulty: 'medium',
         estimatedTimeToSafety: 90,
+        floor: floor,
         safetyNotes: 'When multiple exits are available, choose the one with least smoke. Stay low in smoke-filled areas. Never enter areas with active fire.'
       },
       hard: {
@@ -102,11 +104,12 @@ export class MockScenarioGenerator {
         ],
         blockedNodes: ['node-east-3', 'node-west-2', 'node-center-3'], // Multiple blocked nodes
         blockedPaths: ['node-east-2-node-east-3', 'node-west-1-node-west-2', 'node-center-1-node-center-2'], // Multiple blocked paths
-        availableExits: ['exit-6-south'], // Only one exit available
+        availableExits: [`exit-${floor}-west`], // Only one exit available
         correctPath: ['start', 'south-wing', 'south-exit'], // Longer, more dangerous path
         description: 'MAJOR FIRE ALERT: Multiple fires have broken out simultaneously, blocking both east and west exits. Heavy smoke fills all main corridors. The south exit is your only remaining option - you must navigate through smoke-filled areas. Move quickly but stay low!',
         difficulty: 'hard',
         estimatedTimeToSafety: 150, // Longer time
+        floor: floor,
         safetyNotes: 'CRITICAL: In severe situations, you must pass through smoke-filled areas. Stay low to the ground where air is clearer, move quickly but don\'t panic, cover your mouth with cloth if available. This scenario tests your ability to find the last remaining safe exit. Know your building layout!'
       }
     };

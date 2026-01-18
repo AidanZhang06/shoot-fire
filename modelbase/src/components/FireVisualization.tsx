@@ -51,14 +51,18 @@ export function FireVisualization({ fireLocations, smokeAreas = [] }: FireVisual
         const cameraPos = new THREE.Vector3();
         camera.getWorldPosition(cameraPos);
         const distance = cameraPos.distanceTo(firePos);
-        
+
+        // Check if this is smoke-only (Q1 east corridor)
+        const isSmokeOnly = fire.description?.toLowerCase().includes('smoke');
+
         // Show smoke when viewing from outside (distance > 30 units), fire when close
-        const showSmoke = distance > 30;
-        
+        const showSmoke = distance > 30 || isSmokeOnly;
+        const isFirstPerson = distance <= 30;
+
         return (
           <group key={`fire-${index}`} position={fire.position}>
             {showSmoke ? (
-              // Smoke-only view (when outside/far away) - minimized size
+              // Smoke-only view (gray when far, orange when close for smoke-only)
               <>
                 {/* Large smoke plume - reduced size */}
                 <Sphere
@@ -69,9 +73,11 @@ export function FireVisualization({ fireLocations, smokeAreas = [] }: FireVisual
                   position={[0, 3, 0]}
                 >
                   <meshStandardMaterial
-                    color="#555555"
+                    color={isSmokeOnly && isFirstPerson ? "#ff8844" : "#555555"}
+                    emissive={isSmokeOnly && isFirstPerson ? "#ff6622" : "#000000"}
+                    emissiveIntensity={isSmokeOnly && isFirstPerson ? 0.8 : 0}
                     transparent
-                    opacity={0.4 * fire.intensity}
+                    opacity={0.5 * fire.intensity}
                   />
                 </Sphere>
 
@@ -81,9 +87,11 @@ export function FireVisualization({ fireLocations, smokeAreas = [] }: FireVisual
                   position={[0, 6, 0]}
                 >
                   <meshStandardMaterial
-                    color="#777777"
+                    color={isSmokeOnly && isFirstPerson ? "#ff9955" : "#777777"}
+                    emissive={isSmokeOnly && isFirstPerson ? "#ff7733" : "#000000"}
+                    emissiveIntensity={isSmokeOnly && isFirstPerson ? 0.6 : 0}
                     transparent
-                    opacity={0.3 * fire.intensity}
+                    opacity={0.4 * fire.intensity}
                   />
                 </Sphere>
 
@@ -92,14 +100,26 @@ export function FireVisualization({ fireLocations, smokeAreas = [] }: FireVisual
                   position={[0, 9, 0]}
                 >
                   <meshStandardMaterial
-                    color="#999999"
+                    color={isSmokeOnly && isFirstPerson ? "#ffaa66" : "#999999"}
+                    emissive={isSmokeOnly && isFirstPerson ? "#ff8844" : "#000000"}
+                    emissiveIntensity={isSmokeOnly && isFirstPerson ? 0.4 : 0}
                     transparent
-                    opacity={0.2 * fire.intensity}
+                    opacity={0.3 * fire.intensity}
                   />
                 </Sphere>
+
+                {/* Point light for orange glow in first person */}
+                {isSmokeOnly && isFirstPerson && (
+                  <pointLight
+                    color="#ff7733"
+                    intensity={fire.intensity * 5}
+                    distance={20}
+                    decay={2}
+                  />
+                )}
               </>
             ) : (
-              // Full fire view (when close/inside)
+              // Full fire view (when close/inside) - only for non-smoke
               <>
                 {/* Main fire glow - reduced size */}
                 <Sphere

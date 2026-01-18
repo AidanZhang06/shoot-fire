@@ -19,8 +19,8 @@ export function GreenDotPerson({ position = [0, 0, 0] }: GreenDotPersonProps) {
         position={[0, bodyHeight / 2 + 0.2, 0]}
       >
         <meshStandardMaterial
-          color="#00ff00"
-          emissive="#00ff00"
+          color="#ff0000"
+          emissive="#ff0000"
           emissiveIntensity={0.6}
         />
       </Cylinder>
@@ -31,8 +31,8 @@ export function GreenDotPerson({ position = [0, 0, 0] }: GreenDotPersonProps) {
         position={[0, bodyHeight + headRadius + 0.3, 0]}
       >
         <meshStandardMaterial
-          color="#00ff00"
-          emissive="#00ff00"
+          color="#ff0000"
+          emissive="#ff0000"
           emissiveIntensity={0.6}
         />
       </Sphere>
@@ -43,8 +43,8 @@ export function GreenDotPerson({ position = [0, 0, 0] }: GreenDotPersonProps) {
         position={[-0.15, 0.3, 0]}
       >
         <meshStandardMaterial
-          color="#00ff00"
-          emissive="#00ff00"
+          color="#ff0000"
+          emissive="#ff0000"
           emissiveIntensity={0.6}
         />
       </Cylinder>
@@ -54,15 +54,15 @@ export function GreenDotPerson({ position = [0, 0, 0] }: GreenDotPersonProps) {
         position={[0.15, 0.3, 0]}
       >
         <meshStandardMaterial
-          color="#00ff00"
-          emissive="#00ff00"
+          color="#ff0000"
+          emissive="#ff0000"
           emissiveIntensity={0.6}
         />
       </Cylinder>
 
       {/* Glowing aura around character */}
       <pointLight
-        color="#00ff00"
+        color="#ff0000"
         intensity={2}
         distance={5}
         decay={2}
@@ -75,8 +75,8 @@ export function GreenDotPerson({ position = [0, 0, 0] }: GreenDotPersonProps) {
         position={[0, bodyHeight / 2 + 0.2, 0]}
       >
         <meshStandardMaterial
-          color="#00ff00"
-          emissive="#00ff00"
+          color="#ff0000"
+          emissive="#ff0000"
           emissiveIntensity={0.4}
           transparent
           opacity={0.2}

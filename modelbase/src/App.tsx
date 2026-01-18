@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
+import * as THREE from 'three';
 import { GatesBuilding } from './GatesBuilding';
 import { HillmanBuilding } from './HillmanBuilding';
 import { ConnectingBridges } from './ConnectingBridges';
@@ -14,6 +15,7 @@ import { CoordinateSystem } from './components/CoordinateSystem';
 import { ExitDoor } from './components/ExitDoor';
 import { ExitPathMarkers } from './components/ExitPathMarkers';
 import { FireExitSign } from './components/FireExitSign';
+import { FireAlarmLights } from './components/FireAlarmLights';
 import { ScenarioEngine } from './scenario/ScenarioEngine';
 import { NavigationGraphImpl } from './navigation/NavigationGraph';
 import { GraphBuilder } from './navigation/GraphBuilder';
@@ -27,6 +29,25 @@ import { generateQuadrantFires, generateProgressiveEastSmoke } from './utils/qua
 const mockBuildingLevels = [
   { floorNumber: 6, sections: [{ x: 0, z: 0, width: 40, depth: 18 }], rooms: [], hasHallways: true, mainHallwayWidth: 2.5, sideHallwayWidth: 2.0, offsetX: 0 }
 ];
+
+// Helper function to get positions for a specific floor
+function getFloorPositions(floor: number) {
+  const floorHeight = 3.5;
+  const yPos = (floor - 1) * floorHeight;
+  const mainWingWidth = 45 - (floor - 1) * 1.2;
+  const offsetX = floor >= 7 ? 2 + (floor - 6) * 0.8 : 0;
+
+  return {
+    start: [0, yPos, 0] as [number, number, number],
+    eastCorridor: [15, yPos, 0] as [number, number, number],
+    westStairs: [-(mainWingWidth / 2) + 1.5 + offsetX, yPos, 0] as [number, number, number],
+    southWing: [-15, yPos, 12] as [number, number, number],
+    mainHallway: [0, yPos, 0] as [number, number, number],
+    westExitSign: [-12, yPos, 0] as [number, number, number],
+    eastExitSign: [12, yPos, 0] as [number, number, number],
+    southExitSign: [-15, yPos, 8] as [number, number, number],
+  };
+}
 
 // Movement positions based on scenario choices
 const POSITIONS = {
@@ -75,6 +96,15 @@ function App() {
   const [showQuadrantFires, setShowQuadrantFires] = useState(true); // Toggle for quadrant fires
   const [quadrantFireFloor, setQuadrantFireFloor] = useState(5); // Floor to show quadrant fires on
   const [movementQueue, setMovementQueue] = useState<[number, number, number][]>([]); // Queue of positions to move through
+  const [orbitControlsRef, setOrbitControlsRef] = useState<any>(null);
+  const [isCentering, setIsCentering] = useState(false);
+  const centerAnimationRef = useRef<{
+    startPos: THREE.Vector3;
+    startTarget: THREE.Vector3;
+    targetPos: THREE.Vector3;
+    targetTarget: THREE.Vector3;
+    progress: number;
+  } | null>(null);
 
   // Initialize navigation graph
   useEffect(() => {
@@ -99,16 +129,17 @@ function App() {
   const handleScenarioStart = useCallback((newScenario: FireScenario) => {
     setScenario(newScenario);
     setCurrentStep(0);
-    
-    // Reset player to start position
-    setPlayerPosition(POSITIONS.start);
-    setTargetPosition(POSITIONS.start);
-    
+
+    // Use scenario's start position (dynamically calculated based on floor)
+    const startPos = newScenario.startPosition || POSITIONS.start;
+    setPlayerPosition(startPos);
+    setTargetPosition(startPos);
+
     if (navigationGraph) {
       const engine = new ScenarioEngine(newScenario, navigationGraph);
       engine.start();
       setScenarioEngine(engine);
-      
+
       const initialState = engine.getState();
       setScenarioState(initialState);
     } else {
@@ -117,8 +148,8 @@ function App() {
         scenarioId: newScenario.id,
         startTime: Date.now(),
         currentTime: Date.now(),
-        playerPosition: POSITIONS.start,
-        currentFloor: 6,
+        playerPosition: startPos,
+        currentFloor: newScenario.floor || 6,
         fireLocations: Array.isArray(newScenario.fireLocations)
           ? newScenario.fireLocations.map(fire => ({
               ...fire,
@@ -148,6 +179,10 @@ function App() {
     let newTarget: [number, number, number] | undefined;
     let waypoints: [number, number, number][] = [];
 
+    // Get current floor from scenario
+    const currentFloor = scenario?.floor || 6;
+    const floorPositions = getFloorPositions(currentFloor);
+
     // Map choices to positions based on scenario flow
     switch (choiceId) {
       // Step 0 choices
@@ -157,23 +192,23 @@ function App() {
         break;
       case 'east':
         // Move toward east exit sign first, then corridor
-        newTarget = POSITIONS.eastExitSign;
-        waypoints = [POSITIONS.eastCorridor];
+        newTarget = floorPositions.eastExitSign;
+        waypoints = [floorPositions.eastCorridor];
         break;
       case 'west':
         // Move toward west exit sign first, then stairs
-        newTarget = POSITIONS.westExitSign;
-        waypoints = [POSITIONS.westStairs];
+        newTarget = floorPositions.westExitSign;
+        waypoints = [floorPositions.westStairs];
         break;
 
       // Step 1 choices
       case 'west-stairs':
-        newTarget = POSITIONS.westExitSign;
-        waypoints = [POSITIONS.floor6_westStairs];
+        newTarget = floorPositions.westExitSign;
+        waypoints = [floorPositions.westStairs];
         break;
       case 'south':
-        newTarget = POSITIONS.southExitSign;
-        waypoints = [POSITIONS.southWing];
+        newTarget = floorPositions.southExitSign;
+        waypoints = [floorPositions.southWing];
         break;
       case 'elevator':
         // Stay where you are (elevator doesn't work)
@@ -182,24 +217,24 @@ function App() {
 
       // Step 2 choices - descend with waypoints
       case 'descend':
-        // Create full descent path with landings
-        newTarget = POSITIONS.floor6_westStairs;
-        waypoints = [
-          POSITIONS.floor5_landing,
-          POSITIONS.floor5_westStairs,
-          POSITIONS.floor4_landing,
-          POSITIONS.floor4_westStairs,
-          POSITIONS.floor3_landing,
-          POSITIONS.floor3_westStairs,
-          POSITIONS.floor2_landing,
-          POSITIONS.floor2_westStairs,
-          POSITIONS.floor1_landing,
-          POSITIONS.groundFloor
-        ];
+        // Create descent path from current floor to ground
+        newTarget = floorPositions.westStairs;
+        waypoints = [];
+
+        // Build descent waypoints dynamically from current floor down to ground
+        for (let f = currentFloor - 1; f >= 1; f--) {
+          const floorHeight = 3.5;
+          const yPos = (f - 1) * floorHeight;
+          waypoints.push([-18, yPos, 3] as [number, number, number]); // landing
+          if (f > 1) {
+            waypoints.push([-18, yPos, 0] as [number, number, number]); // stairs
+          }
+        }
+        waypoints.push(POSITIONS.groundFloor);
         break;
       case 'check-floor':
         // Move a bit then come back
-        newTarget = POSITIONS.mainHallway;
+        newTarget = floorPositions.mainHallway;
         break;
 
       // Step 3 choices - move to ground floor exit
@@ -239,7 +274,7 @@ function App() {
     }
 
     setCurrentStep(prev => prev + 1);
-  }, [playerPosition, scenarioState]);
+  }, [playerPosition, scenarioState, scenario]);
 
   const handlePositionUpdate = useCallback((newPosition: [number, number, number]) => {
     setPlayerPosition(newPosition);
@@ -311,6 +346,93 @@ function App() {
     setParsedScenario(null);
     setMovementQueue([]);
   }, []);
+
+  const handleCenterCamera = useCallback(() => {
+    if (orbitControlsRef && !isCentering) {
+      const camera = orbitControlsRef.object;
+      const targetDistance = 15;
+
+      // Calculate direction from player to camera
+      const currentCamPos = camera.position.clone();
+      const currentTarget = orbitControlsRef.target.clone();
+
+      const newTarget = new THREE.Vector3(playerPosition[0], playerPosition[1], playerPosition[2]);
+
+      // Calculate direction in XZ plane only (ignore Y for horizontal positioning)
+      const direction = new THREE.Vector3();
+      direction.subVectors(currentCamPos, newTarget);
+      direction.y = 0; // Flatten to XZ plane
+      direction.normalize();
+
+      // Calculate new camera position at target distance, ALIGNED WITH PLAYER Y-AXIS
+      const newCamPos = new THREE.Vector3(
+        playerPosition[0] + direction.x * targetDistance,
+        playerPosition[1], // Same Y as player - inline with y-axis
+        playerPosition[2] + direction.z * targetDistance
+      );
+
+      // Set up animation
+      centerAnimationRef.current = {
+        startPos: currentCamPos,
+        startTarget: currentTarget,
+        targetPos: newCamPos,
+        targetTarget: newTarget,
+        progress: 0
+      };
+
+      setIsCentering(true);
+    }
+  }, [orbitControlsRef, playerPosition, isCentering]);
+
+  // Animate camera centering
+  useEffect(() => {
+    if (!isCentering || !centerAnimationRef.current || !orbitControlsRef) return;
+
+    let animationFrame: number;
+
+    const animate = () => {
+      if (!centerAnimationRef.current || !orbitControlsRef) {
+        setIsCentering(false);
+        return;
+      }
+
+      const anim = centerAnimationRef.current;
+      anim.progress += 0.03; // Animation speed
+
+      if (anim.progress >= 1) {
+        // Animation complete
+        orbitControlsRef.target.copy(anim.targetTarget);
+        orbitControlsRef.object.position.copy(anim.targetPos);
+        orbitControlsRef.update();
+        setIsCentering(false);
+        centerAnimationRef.current = null;
+        return;
+      }
+
+      // Smooth easing function (ease-out)
+      const easeProgress = 1 - Math.pow(1 - anim.progress, 3);
+
+      // Interpolate camera position
+      const newPos = new THREE.Vector3().lerpVectors(anim.startPos, anim.targetPos, easeProgress);
+      orbitControlsRef.object.position.copy(newPos);
+
+      // Interpolate target position
+      const newTarget = new THREE.Vector3().lerpVectors(anim.startTarget, anim.targetTarget, easeProgress);
+      orbitControlsRef.target.copy(newTarget);
+
+      orbitControlsRef.update();
+
+      animationFrame = requestAnimationFrame(animate);
+    };
+
+    animationFrame = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+      }
+    };
+  }, [isCentering, orbitControlsRef]);
 
   // Auto-walk to exit when escaped
   useEffect(() => {
@@ -404,6 +526,9 @@ function App() {
             speedMultiplier={1.0}
           />
 
+          {/* Fire Alarm Lights - blinks red when scenario is active */}
+          <FireAlarmLights active={scenario !== null} floor={scenario?.floor || 6} />
+
           {/* Fire Visualization - shows based on scenario */}
           {scenario && scenarioState && (
             <FireVisualization
@@ -415,13 +540,13 @@ function App() {
           {/* Progressive East Corridor Smoke - Q1 only, grows with steps */}
           {showQuadrantFires && scenario && scenarioState && (
             <FireVisualization
-              fireLocations={generateProgressiveEastSmoke(quadrantFireFloor, currentStep, 10)}
+              fireLocations={generateProgressiveEastSmoke(scenario.floor || 6, currentStep, 10)}
               smokeAreas={[]}
             />
           )}
 
           {/* Exit Path Markers - Floor indicators showing the way to exits */}
-          <ExitPathMarkers floor={6} />
+          <ExitPathMarkers floor={scenario?.floor || 6} />
 
           {/* Fire Exit Signs - positioned around floor 6 */}
           <FireExitSign position={[-12, 23, 0]} direction="left" />
@@ -459,6 +584,7 @@ function App() {
             />
           ) : (
             <OrbitControls
+              ref={setOrbitControlsRef}
               makeDefault
               enablePan={true}
               enableZoom={true}
@@ -487,6 +613,47 @@ function App() {
           }}
         >
           📐 Axes
+        </button>
+
+        {/* Center on player button - bottom right */}
+        <button
+          onClick={handleCenterCamera}
+          disabled={isCentering}
+          style={{
+            position: 'absolute',
+            bottom: 10,
+            right: 10,
+            width: '50px',
+            height: '50px',
+            padding: '8px',
+            backgroundColor: isCentering ? '#555' : '#333',
+            color: '#fff',
+            border: '2px solid #666',
+            borderRadius: '8px',
+            cursor: isCentering ? 'not-allowed' : 'pointer',
+            fontSize: '28px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+            transition: 'all 0.2s',
+            opacity: isCentering ? 0.6 : 1
+          }}
+          onMouseEnter={(e) => {
+            if (!isCentering) {
+              e.currentTarget.style.backgroundColor = '#444';
+              e.currentTarget.style.transform = 'scale(1.05)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isCentering) {
+              e.currentTarget.style.backgroundColor = '#333';
+              e.currentTarget.style.transform = 'scale(1)';
+            }
+          }}
+          title="Center on Player"
+        >
+          ⊕
         </button>
       </div>
 

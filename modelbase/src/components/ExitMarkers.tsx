@@ -31,44 +31,33 @@ export function ExitMarkers({ availableExits, onExitClick }: ExitMarkersProps) {
         .filter(exit => availableExits.includes(exit.id))
         .map((exit, index) => (
           <group key={exit.id} position={exit.position}>
-            {/* Exit marker - green glowing box */}
+            {/* Small light green platform above staircase */}
             <Box
               ref={(el) => {
                 if (el) markerRefs.current[index] = el;
               }}
-              args={[1, 3, 1]}
-              position={[0, 1.5, 0]}
+              args={[2, 0.2, 2]}
+              position={[0, 2.5, 0]}
               onClick={() => onExitClick?.(exit.id)}
             >
               <meshStandardMaterial
-                color="#00ff00"
-                emissive="#00ff00"
-                emissiveIntensity={0.8}
+                color="#90ee90"
+                emissive="#90ee90"
+                emissiveIntensity={0.5}
                 transparent
-                opacity={0.6}
+                opacity={0.7}
               />
             </Box>
 
             {/* Exit label */}
             <Text
-              position={[0, 3, 0]}
-              fontSize={0.5}
+              position={[0, 3.2, 0]}
+              fontSize={0.4}
               color="#00ff00"
               anchorX="center"
               anchorY="middle"
             >
               {exit.label}
-            </Text>
-
-            {/* Exit description */}
-            <Text
-              position={[0, 2.5, 0]}
-              fontSize={0.3}
-              color="#88ff88"
-              anchorX="center"
-              anchorY="middle"
-            >
-              EXIT
             </Text>
           </group>
         ))}
